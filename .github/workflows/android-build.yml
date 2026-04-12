@@ -15,6 +15,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -72,3 +74,53 @@ jobs:
           name: app-release-apk
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+  # 每次 push 到 main 成功后，在「Releases」页维护一条固定名称的发布（无需手动打 tag）
+  publish-latest-release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout (for rolling tag)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Download Release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-apk
+          path: apk
+
+      - name: Create or update rolling GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eux
+          SRC=$(ls apk/*.apk | head -1)
+          cp "$SRC" weight-agent-release.apk
+          TAG=app-latest
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git tag -fa "$TAG" -m "Rolling release: latest main" "${{ github.sha }}"
+          git push origin "refs/tags/$TAG" --force
+          cat > release-notes.md <<EOF
+          每次 push 到 \`main\` 后自动更新此发布与 APK。
+
+          - 提交: [\`${{ github.sha }}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          - 附件 \`weight-agent-release.apk\` 与 CI 中 \`assembleRelease\` 一致；未配置正式 keystore 时为 **debug 证书**签名的 release 变体。
+
+          版本化发布可推送 \`v*\` 标签，由 \`android-release.yml\` 处理。
+          EOF
+          sed -i 's/^[[:space:]]*//' release-notes.md
+          gh release create "$TAG" weight-agent-release.apk \
+            --title "Latest build (main)" \
+            --notes-file release-notes.md \
+            --latest \
+            --repo "${{ github.repository }}"
