@@ -4,7 +4,7 @@
 
 ### 安装包在哪下（和 GitHub 主页的关系）
 
-GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对应的是 **[Releases 页面](https://github.com/Kaine665/weight-agent/releases)** 里的 **GitHub Release**（带版本号、可挂附件），**不是** Actions 里某次运行的 **Artifacts**。本仓库用 CI 自动创建/更新这些 Release，因此合并到 `main` 并跑绿 CI 后，**打开上面这个 Releases 链接**即可下载 **Latest build (main)** 里的 APK（`weight-agent-release.apk`）。若 Releases 仍为空，说明尚未有一次成功的 **`Publish Latest (main)`** 或未合并带该工作流的 `main`；**Actions 里的产物**只是构建缓存，不会单独出现在主页 Releases 栏。
+GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对应的是 **[Releases 页面](https://github.com/Kaine665/weight-agent/releases)** 里的 **GitHub Release**（带版本号、可挂附件），**不是** Actions 里某次运行的 **Artifacts**。本仓库用 CI 自动创建/更新 **`app-latest`** 这条 Release：**标题为当次构建的软件版本号**（如 **`v0.1.5`**，与 `app/build.gradle.kts` 的 `versionName` 一致），附件 **`weight-agent-release.apk`**。合并到 `main` 并跑绿 CI 后即可在 Releases 页下载。若仍为空，说明尚未有一次成功的 **`Publish Latest (main)`**；**Actions 里的 Artifacts** 不会单独出现在主页 Releases 栏。
 
 ## 自用场景约定（与规格书一致）
 
@@ -35,7 +35,8 @@ GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对
 3. 在项目根目录执行：  
    - Debug：`./gradlew :app:assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk`  
    - Release：`./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk`  
-4. **Release 签名**：若仓库根目录存在 **`release.keystore`** 与 **`keystore.properties`**（见 `keystore.properties.example`），则 release 使用正式签名；否则 **release 与 debug 共用 debug 签名**（便于 CI 无密钥时仍能产出 release 包，仅供自用侧载）。也可不设文件，改为环境变量：`ANDROID_KEYSTORE_FILE`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_PASSWORD`、`ANDROID_KEY_ALIAS`。
+4. **Release 签名**：若仓库根目录存在 **`release.keystore`** 与 **`keystore.properties`**（见 `keystore.properties.example`），则 release 使用正式签名；否则 **release 与 debug 共用 debug 签名**（便于 CI 无密钥时仍能产出 release 包，仅供自用侧载）。也可不设文件，改为环境变量：`ANDROID_KEYSTORE_FILE`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_PASSWORD`、`ANDROID_KEY_ALIAS`。  
+5. **版本号**：平时开发可手动改 `versionCode` / `versionName`；**`main` 上 CI 成功后会自动 patch 自增**（见上文），本地拉取 `main` 即可获得与 Releases 一致的版本。
 
 在无 Android Studio 的环境（如 CI）中，也可将 SDK 解压到仓库旁的自定义目录，并在 `local.properties` 中写 `sdk.dir=/绝对路径`；本仓库 `.gitignore` 已忽略常见本地下载目录名 `android-sdk/`。
 
@@ -45,7 +46,7 @@ GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对
 
 **GitHub Releases（右侧「Releases」页）**：
 
-- **默认「最新构建」**：每次 **push 到 `main`** 且 **Android CI** 成功后，由单独工作流 **`.github/workflows/android-publish-latest.yml`**（`workflow_run`）创建/更新标签 **`app-latest`** 与发布 **「Latest build (main)」**，附件为 **`weight-agent-release.apk`**。这样 **PR 里的 Android CI** 不会出现「发布 job 被跳过」；只有合并进 `main` 后的那次构建会触发发布。在 **Actions** 里可看到 **Publish Latest (main)** 这条运行记录。
+- **默认「main 滚动发布」**：每次 **push 到 `main`**（且提交说明不含 **`[skip ci]`**）时，**Android CI** 会在构建前将 **`versionCode` +1**、**`versionName` 的 patch +1**（如 `0.1.4` → `0.1.5`），构建成功后 **回推到 `main`**（提交信息含 `[skip ci]`，避免无限循环）。随后 **`.github/workflows/android-publish-latest.yml`** 更新 **`app-latest`** Release，**标题为 `v{versionName}`**。PR 的 CI 不 bump、不推送。详见脚本 **`scripts/bump_app_version.py`**。
 - **版本号发布**：推送形如 **`v0.1.1`** 的 **git tag** 会触发 **`.github/workflows/android-release.yml`**，另建一条带版本名的 Release 并附上 **`app-release.apk`**。示例：
 
 ```bash

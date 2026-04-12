@@ -20,11 +20,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      # 避免：bot 推送 [skip ci] 的 version commit 再次触发 workflow 时又 bump 一次（连跳两版）
+      - name: Bump app version (main push only, not after [skip ci] commit)
+        id: bump
+        if: >
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main' &&
+          !contains(github.event.head_commit.message, '[skip ci]')
+        run: python3 scripts/bump_app_version.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -78,3 +87,23 @@ jobs:
           name: app-release-apk
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      - name: Commit version bump to main
+        if: >
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main' &&
+          !contains(github.event.head_commit.message, '[skip ci]')
+        env:
+          VERSION_NAME: ${{ steps.bump.outputs.version_name }}
+          VERSION_CODE: ${{ steps.bump.outputs.version_code }}
+        run: |
+          set -eux
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add app/build.gradle.kts
+          if git diff --staged --quiet; then
+            echo "No version changes to commit"
+            exit 0
+          fi
+          git commit -m "chore(release): bump to v${VERSION_NAME} (${VERSION_CODE}) [skip ci]"
+          git push origin HEAD:main
