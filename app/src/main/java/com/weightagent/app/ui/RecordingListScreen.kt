@@ -148,7 +148,7 @@ fun RecordingListScreen(
                         .padding(24.dp),
                 ) {
                     Text(
-                        "暂无录音条目。请确认系统录音机已产生文件且已授权读取音频；下拉可刷新。",
+                        "暂无录音条目。请确认已授权「读取音频」；在系统「文件」或「录音机」里能看到录音后，下拉刷新。若仍为空，可能是厂商把录音放在仅本机可见的目录（未进入媒体库），本应用只扫描 MediaStore。",
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
