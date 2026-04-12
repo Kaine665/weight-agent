@@ -37,9 +37,12 @@
 
 ### GitHub Actions
 
-对 `main` 的 **push**/**pull_request** 会触发 **Android CI**（见 `.github/workflows/android-build.yml`）：安装 SDK、执行 `./gradlew :app:assembleDebug`、`:app:assembleRelease` 与 `:app:testDebugUnitTest`，并将构件 **`app-debug-apk`** 与 **`app-release-apk`** 上传到该次运行的 **Artifacts**（路径：**Actions** → 点开某次运行 → 页面底部的 **Artifacts**，**不是**仓库主页右侧的 **Releases**）。默认 CI 上的 release 为 **debug 证书签名**；若要在 CI 中使用正式证书，请在仓库 **Settings → Secrets and variables → Actions** 中配置 `ANDROID_KEYSTORE_*` 并在工作流中安全注入 keystore 文件。
+对 `main` 的 **push**/**pull_request** 会触发 **Android CI**（见 `.github/workflows/android-build.yml`）：安装 SDK、执行 `./gradlew :app:assembleDebug`、`:app:assembleRelease` 与 `:app:testDebugUnitTest`，并将构件 **`app-debug-apk`** 与 **`app-release-apk`** 上传到该次运行的 **Artifacts**（路径：**Actions** → 点开某次运行 → 页面底部的 **Artifacts**）。默认 CI 上的 release 为 **debug 证书签名**；若要在 CI 中使用正式证书，请在仓库 **Settings → Secrets and variables → Actions** 中配置 `ANDROID_KEYSTORE_*` 并在工作流中安全注入 keystore 文件。
 
-**GitHub Releases（右侧「Releases」页）**：推送形如 **`v0.1.1`** 的 **git tag** 会触发 **`.github/workflows/android-release.yml`**，自动创建一条 Release 并附上 **`app-release.apk`**。示例（在已合并的 `main` 上、本地已配置 `git` 与权限时）：
+**GitHub Releases（右侧「Releases」页）**：
+
+- **默认「最新构建」**：每次 **push 到 `main`** 且 CI 成功后，工作流会创建/更新标签 **`app-latest`** 与发布 **「Latest build (main)」**，附件为 **`weight-agent-release.apk`**（与当次 `assembleRelease` 一致）。合并本仓库相关 CI 改动后，**下一次 push 到 `main`** 即可在 Releases 页看到。
+- **版本号发布**：推送形如 **`v0.1.1`** 的 **git tag** 会触发 **`.github/workflows/android-release.yml`**，另建一条带版本名的 Release 并附上 **`app-release.apk`**。示例：
 
 ```bash
 git tag v0.1.1
