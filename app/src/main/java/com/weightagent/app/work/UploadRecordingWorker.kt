@@ -43,7 +43,7 @@ class UploadRecordingWorker(
             return Result.success()
         }
 
-        val stable = awaitStableSize(applicationContext, mediaStoreId)
+        val stable = awaitStableSize(applicationContext, entity.contentUri)
         if (!stable.ok) {
             enqueueDelayed(mediaStoreId, seconds = 3)
             return Result.success()
@@ -108,10 +108,10 @@ class UploadRecordingWorker(
 
     private data class StableSize(val ok: Boolean, val sizeBytes: Long)
 
-    private suspend fun awaitStableSize(context: Context, mediaStoreId: Long): StableSize {
-        val first = MediaStoreSizeReader.readSizeBytes(context, mediaStoreId) ?: return StableSize(false, 0L)
+    private suspend fun awaitStableSize(context: Context, contentUri: String): StableSize {
+        val first = MediaStoreSizeReader.readSizeBytes(context, contentUri) ?: return StableSize(false, 0L)
         delay(2_000)
-        val second = MediaStoreSizeReader.readSizeBytes(context, mediaStoreId) ?: return StableSize(false, 0L)
+        val second = MediaStoreSizeReader.readSizeBytes(context, contentUri) ?: return StableSize(false, 0L)
         return if (first == second && first > 0L) {
             StableSize(true, first)
         } else {

@@ -75,7 +75,7 @@ git push origin v0.1.1
 ### 已知限制（与 SPEC 非目标一致）
 
 - 仅 **腾讯云 COS**，无多云。
-- 以 **MediaStore 可见**音频为准，不保证抓取未进入媒体库的沙盒路径。扫描不再强制要求 MIME 为 `audio/*`（避免厂商录音为 `null` / `application/octet-stream` 时被漏掉）；仍会跳过 `video/*`。
+- 以 **MediaStore 可见**音频为准，不保证抓取未进入媒体库的沙盒路径。扫描 **Audio.Media** 与 **Files（MEDIA_TYPE_AUDIO）** 两套索引；**IS_PENDING** 同时接受 **NULL** 与 `0`（避免 SQL `= 0` 误过滤 OEM 行）；不按 MIME 在 SQL 里限制为 `audio/*`；仍会跳过 `video/*`。上传前按 **content Uri** 读大小，兼容 Files 来源。
 - 断网、杀进程依赖 **WorkManager** 重试与用户再次打开 App 触发巡检；不承诺秒级上传。
 - 清除应用数据会丢失本地配置与队列状态；云端已存在对象**不会**自动与本地对齐（SPEC 用例 10）。
 

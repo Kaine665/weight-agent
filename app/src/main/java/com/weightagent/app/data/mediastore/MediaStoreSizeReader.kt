@@ -1,21 +1,25 @@
 package com.weightagent.app.data.mediastore
 
-import android.content.ContentUris
 import android.content.Context
-import android.provider.MediaStore
+import android.net.Uri
+import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object MediaStoreSizeReader {
 
-    suspend fun readSizeBytes(context: Context, mediaStoreId: Long): Long? = withContext(Dispatchers.IO) {
-        val collection = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        val uri = ContentUris.withAppendedId(collection, mediaStoreId)
-        val projection = arrayOf(MediaStore.Audio.Media.SIZE)
+    /**
+     * 按 [contentUri] 查询当前大小（支持 Audio.Media 与 Files 的 content Uri）。
+     */
+    suspend fun readSizeBytes(context: Context, contentUri: String): Long? = withContext(Dispatchers.IO) {
+        val uri = Uri.parse(contentUri)
+        val projection = arrayOf(OpenableColumns.SIZE)
         context.contentResolver.query(uri, projection, null, null, null)?.use { c ->
             if (!c.moveToFirst()) return@withContext null
-            val idx = c.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
-            c.getLong(idx)
+            val idx = c.getColumnIndex(OpenableColumns.SIZE)
+            if (idx < 0) return@withContext null
+            val v = c.getLong(idx)
+            if (v > 0L) v else null
         }
     }
 }
