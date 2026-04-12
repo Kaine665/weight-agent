@@ -56,6 +56,7 @@ import androidx.navigation.NavController
 import com.weightagent.app.data.db.RecordingEntity
 import com.weightagent.app.data.db.SyncStatus
 import com.weightagent.app.data.device.OemDevice
+import com.weightagent.app.data.saf.SafOpenHelper
 import com.weightagent.app.data.storage.AllFilesAccessHelper
 import com.weightagent.app.ui.nav.Routes
 import java.util.concurrent.TimeUnit
@@ -236,12 +237,12 @@ fun RecordingListScreen(
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
-                            "用系统文件管理器授权一个或多个文件夹（可反复「添加目录」）。适合录音在私有目录、自动扫描不到的情况；移除仅取消授权，不会删手机里的文件。",
+                            "用系统文件管理器授权一个或多个文件夹（可反复「添加目录」）。若系统提示「为了保护您的隐私，请选择其他文件夹」，说明当前路径属于系统禁止 SAF 授权的范围（常见为 Android/data、Android/obb）；请改选 **Download、Recordings、MIUI** 等公共目录，或先开启上方「全部文件访问」后用自动扫描。移除仅取消本应用授权，不会删手机里的文件。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Button(
-                            onClick = { openTreeLauncher.launch(null) },
+                            onClick = { openTreeLauncher.launch(SafOpenHelper.initialTreeUriForPicker()) },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Row(
