@@ -15,7 +15,7 @@
 ```bash
 export ANDROID_HOME=/path/to/android-sdk   # 可选；与 sdk.dir 一致时便于 sdkmanager
 ./gradlew :app:assembleDebug    # 编译 Debug APK
-./gradlew :app:assembleRelease  # 编译 Release APK（无 keystore.properties 时使用 debug 签名）
+./gradlew :app:assembleRelease  # 无 keystore.properties 时用 keystores/ci-debug.keystore（与 debug/CI 同签名）
 ./gradlew :app:lintDebug        # Lint（需已配置 SDK）
 ./gradlew :app:testDebugUnitTest # 单元测试（若有）
 ```

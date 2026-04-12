@@ -41,6 +41,13 @@ android {
     }
 
     signingConfigs {
+        // 与 Android 默认 debug 相同口令；提交在仓库内，使本地 debug / 无 release 时的 release 与 CI APK 同签名
+        create("ciDebug") {
+            storeFile = rootProject.file("keystores/ci-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         val kf = releaseKeystoreFile()
         val storePwd = propOrEnv("storePassword", "ANDROID_KEYSTORE_PASSWORD")
         val keyPwd = propOrEnv("keyPassword", "ANDROID_KEY_PASSWORD")
@@ -56,6 +63,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("ciDebug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -69,7 +79,7 @@ android {
             signingConfig = if (kf != null && storePwd.isNotBlank() && keyPwd.isNotBlank() && alias.isNotBlank()) {
                 signingConfigs.getByName("release")
             } else {
-                signingConfigs.getByName("debug")
+                signingConfigs.getByName("ciDebug")
             }
         }
     }
