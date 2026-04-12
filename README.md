@@ -2,6 +2,10 @@
 
 安卓本地录音同步至腾讯云 COS（第一期 MVP）。产品验收与边界见 **`docs/SPEC.md`**；Android 工程位于 **`app/`**。
 
+### 安装包在哪下（和 GitHub 主页的关系）
+
+GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对应的是 **[Releases 页面](https://github.com/Kaine665/weight-agent/releases)** 里的 **GitHub Release**（带版本号、可挂附件），**不是** Actions 里某次运行的 **Artifacts**。本仓库用 CI 自动创建/更新这些 Release，因此合并到 `main` 并跑绿 CI 后，**打开上面这个 Releases 链接**即可下载 **Latest build (main)** 里的 APK（`weight-agent-release.apk`）。若 Releases 仍为空，说明尚未有一次成功的 **`Publish Latest (main)`** 或未合并带该工作流的 `main`；**Actions 里的产物**只是构建缓存，不会单独出现在主页 Releases 栏。
+
 ## 自用场景约定（与规格书一致）
 
 - **谁用、怎么装**：仅本人使用，不向他人分发。在本机用 Android Studio 打开工程并运行，或执行 `./gradlew :app:assembleDebug` 后用 `adb install` 安装生成的 APK。
