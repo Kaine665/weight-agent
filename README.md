@@ -33,6 +33,10 @@
 
 在无 Android Studio 的环境（如 CI）中，也可将 SDK 解压到仓库旁的自定义目录，并在 `local.properties` 中写 `sdk.dir=/绝对路径`；本仓库 `.gitignore` 已忽略常见本地下载目录名 `android-sdk/`。
 
+### GitHub Actions
+
+对 `main` 的 **push**/**pull_request** 会触发 **Android CI**（见 `.github/workflows/android-build.yml`）：安装 SDK、执行 `./gradlew :app:assembleDebug` 与 `:app:testDebugUnitTest`，并将 **`app-debug-apk`** 构件（`app-debug.apk`）上传到该次运行的 **Artifacts**。
+
 ### 权限
 
 - **`READ_MEDIA_AUDIO`**：从 `MediaStore` 读取系统可见的音频（含录音机产物）。
