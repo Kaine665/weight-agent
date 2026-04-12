@@ -161,6 +161,11 @@ fun RecordingListScreen(
             return@Scaffold
         }
 
+        val showXiaomiAllFilesBanner = OemDevice.isXiaomiFamily() &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            hasAudioPermission &&
+            !hasAllFilesAccess
+
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = { viewModel.refresh() },
@@ -169,60 +174,68 @@ fun RecordingListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            if (OemDevice.isXiaomiFamily() &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                hasAudioPermission &&
-                !hasAllFilesAccess
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        "检测到小米/红米设备：系统录音可能保存在「Android/data/…/录音机」私有目录，未进媒体库。请开启「全部文件访问权限」后下拉刷新，即可扫描该目录。",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Button(
-                        onClick = {
-                            AllFilesAccessHelper.openManageAllFilesSettings(context)
-                        },
+            Column(Modifier.fillMaxSize()) {
+                if (showXiaomiAllFilesBanner) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text("去开启全部文件访问权限")
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            storageRecheckKey++
-                            viewModel.refresh()
-                        },
-                    ) {
-                        Text("我已授权，重新扫描")
-                    }
-                }
-            }
-            if (recordings.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                ) {
-                    Text(
-                        "暂无录音条目。请下拉刷新。若已授权「读取音频」仍为空：小米等机型上录音有时只在「媒体库 Files」索引里，本应用已同时扫描；仍无则请到系统「录音机」再录一条新录音后刷新，或确认文件管理里该录音是否在「音频」分类可见（未进媒体库则无法列出）。",
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(recordings, key = { it.mediaStoreId }) { row ->
-                        RecordingRow(
-                            row = row,
-                            onUpload = { viewModel.enqueueUpload(row.mediaStoreId) },
+                        Text(
+                            "检测到小米/红米设备：系统录音可能保存在「Android/data/…/录音机」私有目录，未进媒体库。请开启「全部文件访问权限」后下拉刷新，即可扫描该目录。",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Button(
+                            onClick = {
+                                AllFilesAccessHelper.openManageAllFilesSettings(context)
+                            },
+                        ) {
+                            Text("去开启全部文件访问权限")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                storageRecheckKey++
+                                viewModel.refresh()
+                            },
+                        ) {
+                            Text("我已授权，重新扫描")
+                        }
+                    }
+                }
+                if (recordings.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = true)
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        if (showXiaomiAllFilesBanner) {
+                            Text(
+                                "当前未扫描到录音条目。完成上方授权后下拉刷新即可。",
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        } else {
+                            Text(
+                                "暂无录音条目。请下拉刷新。若已授权「读取音频」仍为空：小米等机型上录音有时只在「媒体库 Files」索引里，本应用已同时扫描；仍无则请到系统「录音机」再录一条新录音后刷新，或确认文件管理里该录音是否在「音频」分类可见（未进媒体库则无法列出）。",
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = true),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        items(recordings, key = { it.mediaStoreId }) { row ->
+                            RecordingRow(
+                                row = row,
+                                onUpload = { viewModel.enqueueUpload(row.mediaStoreId) },
+                            )
+                        }
                     }
                 }
             }
