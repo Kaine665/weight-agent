@@ -4,7 +4,7 @@
 
 ### 安装包在哪下（和 GitHub 主页的关系）
 
-GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对应的是 **[Releases 页面](https://github.com/Kaine665/weight-agent/releases)** 里的 **GitHub Release**（带版本号、可挂附件），**不是** Actions 里某次运行的 **Artifacts**。本仓库用 CI 自动创建/更新 **`app-latest`** 这条 Release：**标题为当次构建的软件版本号**（如 **`v0.1.5`**，与 `app/build.gradle.kts` 的 `versionName` 一致），附件 **`weight-agent-release.apk`**。合并到 `main` 并跑绿 CI 后即可在 Releases 页下载。若仍为空，说明尚未有一次成功的 **`Publish Latest (main)`**；**Actions 里的 Artifacts** 不会单独出现在主页 Releases 栏。
+GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对应的是 **[Releases 页面](https://github.com/Kaine665/weight-agent/releases)** 里的 **GitHub Release**（带版本号、可挂附件），**不是** Actions 里某次运行的 **Artifacts**。**`main`** 上每次 **Android CI** 成功后，**`.github/workflows/android-publish-latest.yml`** 会为 **`v{versionName}`**（与 `app/build.gradle.kts` 一致）**新建一条 Release**，附件 **`weight-agent-release.apk`**；**历史版本保留、不再用单条 `app-latest` 覆盖**。同一版本 CI 重跑时仅更新该条下的同名附件。若 Releases 仍为空，说明尚未有一次成功的 **`Publish main APK (per version)`** 运行。
 
 ## 自用场景约定（与规格书一致）
 
@@ -46,7 +46,7 @@ GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对
 
 **GitHub Releases（右侧「Releases」页）**：
 
-- **默认「main 滚动发布」**：每次 **push 到 `main`**（且提交说明不含 **`[skip ci]`**）时，**Android CI** 会在构建前将 **`versionCode` +1**、**`versionName` 的 patch +1**（如 `0.1.4` → `0.1.5`），构建成功后 **回推到 `main`**（提交信息含 `[skip ci]`，避免无限循环）。随后 **`.github/workflows/android-publish-latest.yml`** 更新 **`app-latest`** Release，**标题为 `v{versionName}`**。PR 的 CI 不 bump、不推送。详见脚本 **`scripts/bump_app_version.py`**。
+- **main 自动发版（按版本保留）**：每次 **push 到 `main`**（且提交说明不含 **`[skip ci]`**）时，**Android CI** 会在构建前将 **`versionCode` +1**、**`versionName` 的 patch +1**，构建成功后 **回推 `main`**（`[skip ci]`）。随后 **`Publish main APK (per version)`** 为 **`v{versionName}`** 创建 **独立 GitHub Release**（不删除旧版）。PR 的 CI 不 bump、不推送。详见 **`scripts/bump_app_version.py`**。
 - **版本号发布**：推送形如 **`v0.1.1`** 的 **git tag** 会触发 **`.github/workflows/android-release.yml`**，另建一条带版本名的 Release 并附上 **`app-release.apk`**。示例：
 
 ```bash

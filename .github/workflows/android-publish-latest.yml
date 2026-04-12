@@ -1,5 +1,5 @@
-# 仅在「push 到 main 且 Android CI 成功」后更新 Releases，避免在 PR 的同一工作流里出现 Skipped job
-name: Publish Latest (main)
+# main 上 Android CI 成功后：为当前版本新建一条 GitHub Release（不覆盖历史）
+name: Publish main APK (per version)
 
 on:
   workflow_run:
@@ -11,13 +11,13 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: publish-latest-main
+  group: publish-main-apk-${{ github.event.workflow_run.id }}
   cancel-in-progress: true
 
 jobs:
-  publish-latest-release:
+  publish-version-release:
     runs-on: ubuntu-latest
-    # 注意：push 到 main 时 head_branch 有时为空字符串，不能写死 == 'main' 否则整 job 被 Skip
+    # 注意：push 到 main 时 head_branch 有时为空字符串
     if: >
       github.event.workflow_run.conclusion == 'success' &&
       (github.event.workflow_run.event == 'push' ||
@@ -30,7 +30,7 @@ jobs:
       actions: read
 
     steps:
-      - name: Checkout (for rolling tag + read version from tree)
+      - name: Checkout at CI head SHA
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -44,7 +44,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Create or update rolling GitHub Release
+      - name: Create immutable release for this version (or refresh asset on re-run)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -54,26 +54,34 @@ jobs:
           APP_CODE=$(grep -E 'versionCode\s*=' app/build.gradle.kts | head -1 | sed -E 's/.*versionCode\s*=\s*([0-9]+).*/\1/')
           test -n "$APP_VER"
           test -n "$APP_CODE"
-          RELEASE_TITLE="v${APP_VER}"
+          TAG="v${APP_VER}"
+          RELEASE_TITLE="$TAG"
           SRC=$(ls apk/*.apk | head -1)
           cp "$SRC" weight-agent-release.apk
-          TAG=app-latest
-          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git tag -fa "$TAG" -m "Rolling release ${RELEASE_TITLE} (versionCode ${APP_CODE})" "$HEAD_SHA"
+          git tag -fa "$TAG" -m "CI build ${RELEASE_TITLE} (versionCode ${APP_CODE})" "$HEAD_SHA"
           git push origin "refs/tags/$TAG" --force
+
           cat > release-notes.md <<EOF
-          对应 \`app/build.gradle.kts\`：**versionName \`${APP_VER}\`** / **versionCode \`${APP_CODE}\`**。由 [Android CI](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}) 构建成功后自动更新（标签 \`app-latest\`）。
+          **versionName** \`${APP_VER}\` · **versionCode** \`${APP_CODE}\`（\`app/build.gradle.kts\` 于本次构建提交）。
 
-          - 提交: [\`$HEAD_SHA\`](https://github.com/${{ github.repository }}/commit/$HEAD_SHA)
-          - 附件 \`weight-agent-release.apk\`；未配置正式 keystore 时为 **debug 证书**签名的 release 变体。
+          - 构建提交: [\`$HEAD_SHA\`](https://github.com/${{ github.repository }}/commit/$HEAD_SHA)
+          - [Android CI 运行](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }})
+          - 附件 \`weight-agent-release.apk\`；未配置正式 keystore 时为 **ci-debug** 签名的 release 变体。
 
-          **main** 上每次非 \`[skip ci]\` 的构建会自动 **patch 自增** \`versionName\` / \`versionCode\` 并回推仓库。带 **git 标签** 的独立版本由 \`android-release.yml\`（\`v*\`）创建。
+          本条 Release **按版本保留**，不再覆盖旧版。手动 **git tag v\*** 触发的发布见 \`android-release.yml\`（附件名为 \`app-release.apk\`）。
           EOF
           sed -i 's/^[[:space:]]*//' release-notes.md
-          gh release create "$TAG" weight-agent-release.apk \
-            --title "$RELEASE_TITLE" \
-            --notes-file release-notes.md \
-            --latest \
-            --repo "${{ github.repository }}"
+
+          REPO="${{ github.repository }}"
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" weight-agent-release.apk --clobber --repo "$REPO"
+          else
+            gh release create "$TAG" weight-agent-release.apk \
+              --title "$RELEASE_TITLE" \
+              --notes-file release-notes.md \
+              --latest \
+              --repo "$REPO"
+          fi
