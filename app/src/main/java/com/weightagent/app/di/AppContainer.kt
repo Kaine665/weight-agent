@@ -5,6 +5,7 @@ import androidx.work.WorkManager
 import com.weightagent.app.data.cos.CosRepository
 import com.weightagent.app.data.db.AppDatabase
 import com.weightagent.app.data.mediastore.MediaStoreAudioScanner
+import com.weightagent.app.data.mediastore.XiaomiPrivateRecorderScanner
 import com.weightagent.app.data.settings.CosSettingsStore
 
 class AppContainer(context: Context) {
@@ -15,6 +16,7 @@ class AppContainer(context: Context) {
     val recordingDao = database.recordingDao()
     val cosSettingsStore = CosSettingsStore(applicationContext)
     val mediaStoreScanner = MediaStoreAudioScanner(applicationContext, recordingDao)
+    val xiaomiPrivateRecorderScanner = XiaomiPrivateRecorderScanner(applicationContext, recordingDao)
     val cosRepository = CosRepository(applicationContext)
     val workManager: WorkManager get() = WorkManager.getInstance(applicationContext)
 }
