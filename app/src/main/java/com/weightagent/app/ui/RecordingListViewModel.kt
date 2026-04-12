@@ -27,6 +27,7 @@ class RecordingListViewModel(
             isRefreshing.value = true
             try {
                 container.mediaStoreScanner.refreshFromMediaStore()
+                container.xiaomiPrivateRecorderScanner.scanIfApplicable()
                 container.workManager.enqueueUniqueWork(
                     RefreshAndEnqueueWorker.UNIQUE_NAME,
                     ExistingWorkPolicy.KEEP,

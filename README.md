@@ -56,6 +56,7 @@ git push origin v0.1.1
 ### 权限
 
 - **`READ_MEDIA_AUDIO`**：从 `MediaStore` 读取系统可见的音频（含录音机产物）。
+- **`MANAGE_EXTERNAL_STORAGE`（全部文件访问）**：声明于清单；**仅小米/红米/POCO** 且在 **Android 11+** 上，若系统录音保存在 **`Android/data/.../录音机`** 等私有目录、未进媒体库，需用户在系统设置中为本应用开启「全部文件访问权限」后，应用才能扫描这些目录（列表页会显示引导按钮）。非小米设备或非该场景可不授予。
 - **`INTERNET`**、**`ACCESS_NETWORK_STATE`**：访问 COS。
 
 首次启动若未授权，列表页会显示中文引导；授权后下拉刷新可重新扫描。
@@ -75,7 +76,7 @@ git push origin v0.1.1
 ### 已知限制（与 SPEC 非目标一致）
 
 - 仅 **腾讯云 COS**，无多云。
-- 以 **MediaStore 可见**音频为准，不保证抓取未进入媒体库的沙盒路径。扫描 **Audio.Media** 与 **Files（MEDIA_TYPE_AUDIO）** 两套索引；**IS_PENDING** 同时接受 **NULL** 与 `0`（避免 SQL `= 0` 误过滤 OEM 行）；不按 MIME 在 SQL 里限制为 `audio/*`；仍会跳过 `video/*`。上传前按 **content Uri** 读大小，兼容 Files 来源。
+- 以 **MediaStore 可见**音频为主；**小米系**在授予 **全部文件访问** 后，会额外扫描 **`Android/data/com.android.soundrecorder`**、**`com.miui.soundrecorder`** 下常见录音扩展名（系统录音机私有目录）。扫描 **Audio.Media** 与 **Files（MEDIA_TYPE_AUDIO）**；**IS_PENDING** 接受 **NULL** 与 `0`；不按 MIME 在 SQL 里限制为 `audio/*`；跳过 `video/*`。上传支持 **`content://`** 与 **`file://`**。
 - 断网、杀进程依赖 **WorkManager** 重试与用户再次打开 App 触发巡检；不承诺秒级上传。
 - 清除应用数据会丢失本地配置与队列状态；云端已存在对象**不会**自动与本地对齐（SPEC 用例 10）。
 

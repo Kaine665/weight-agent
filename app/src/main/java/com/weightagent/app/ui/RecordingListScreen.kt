@@ -1,6 +1,7 @@
 package com.weightagent.app.ui
 
 import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +39,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -44,6 +49,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.weightagent.app.data.db.RecordingEntity
 import com.weightagent.app.data.db.SyncStatus
+import com.weightagent.app.data.device.OemDevice
+import com.weightagent.app.data.storage.AllFilesAccessHelper
 import com.weightagent.app.ui.nav.Routes
 import java.util.concurrent.TimeUnit
 
@@ -86,6 +93,27 @@ fun RecordingListScreen(
     }
 
     val pullState = rememberPullToRefreshState()
+
+    var hasAllFilesAccess by remember {
+        mutableStateOf(AllFilesAccessHelper.hasAllFilesAccess(context))
+    }
+    var storageRecheckKey by remember { mutableStateOf(0) }
+    LaunchedEffect(hasAudioPermission, storageRecheckKey) {
+        if (hasAudioPermission) {
+            hasAllFilesAccess = AllFilesAccessHelper.hasAllFilesAccess(context)
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasAllFilesAccess = AllFilesAccessHelper.hasAllFilesAccess(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
 
     Scaffold(
         topBar = {
@@ -141,6 +169,39 @@ fun RecordingListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            if (OemDevice.isXiaomiFamily() &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                hasAudioPermission &&
+                !hasAllFilesAccess
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        "检测到小米/红米设备：系统录音可能保存在「Android/data/…/录音机」私有目录，未进媒体库。请开启「全部文件访问权限」后下拉刷新，即可扫描该目录。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = {
+                            AllFilesAccessHelper.openManageAllFilesSettings(context)
+                        },
+                    ) {
+                        Text("去开启全部文件访问权限")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            storageRecheckKey++
+                            viewModel.refresh()
+                        },
+                    ) {
+                        Text("我已授权，重新扫描")
+                    }
+                }
+            }
             if (recordings.isEmpty()) {
                 Column(
                     modifier = Modifier

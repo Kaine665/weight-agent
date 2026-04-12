@@ -5,14 +5,17 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 object MediaStoreSizeReader {
 
-    /**
-     * 按 [contentUri] 查询当前大小（支持 Audio.Media 与 Files 的 content Uri）。
-     */
     suspend fun readSizeBytes(context: Context, contentUri: String): Long? = withContext(Dispatchers.IO) {
         val uri = Uri.parse(contentUri)
+        if (uri.scheme?.equals("file", ignoreCase = true) == true) {
+            val p = uri.path ?: return@withContext null
+            val len = File(p).length()
+            return@withContext if (len > 0L) len else null
+        }
         val projection = arrayOf(OpenableColumns.SIZE)
         context.contentResolver.query(uri, projection, null, null, null)?.use { c ->
             if (!c.moveToFirst()) return@withContext null
