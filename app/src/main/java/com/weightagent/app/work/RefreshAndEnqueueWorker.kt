@@ -17,6 +17,7 @@ class RefreshAndEnqueueWorker(
     override suspend fun doWork(): Result {
         container.mediaStoreScanner.refreshFromMediaStore()
         container.xiaomiPrivateRecorderScanner.scanIfApplicable()
+        container.safTreeAudioScanner.scanPersistedTrees()
 
         val settings = container.cosSettingsStore.read()
         if (settings == null || !settings.isComplete()) {
