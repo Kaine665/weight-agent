@@ -41,7 +41,7 @@
 
 **GitHub Releases（右侧「Releases」页）**：
 
-- **默认「最新构建」**：每次 **push 到 `main`** 且 CI 成功后，工作流会创建/更新标签 **`app-latest`** 与发布 **「Latest build (main)」**，附件为 **`weight-agent-release.apk`**（与当次 `assembleRelease` 一致）。合并本仓库相关 CI 改动后，**下一次 push 到 `main`** 即可在 Releases 页看到。
+- **默认「最新构建」**：每次 **push 到 `main`** 且 **Android CI** 成功后，由单独工作流 **`.github/workflows/android-publish-latest.yml`**（`workflow_run`）创建/更新标签 **`app-latest`** 与发布 **「Latest build (main)」**，附件为 **`weight-agent-release.apk`**。这样 **PR 里的 Android CI** 不会出现「发布 job 被跳过」；只有合并进 `main` 后的那次构建会触发发布。在 **Actions** 里可看到 **Publish Latest (main)** 这条运行记录。
 - **版本号发布**：推送形如 **`v0.1.1`** 的 **git tag** 会触发 **`.github/workflows/android-release.yml`**，另建一条带版本名的 Release 并附上 **`app-release.apk`**。示例：
 
 ```bash
