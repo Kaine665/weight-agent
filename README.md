@@ -4,7 +4,7 @@
 
 ### 安装包在哪下（和 GitHub 主页的关系）
 
-GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对应的是 **[Releases 页面](https://github.com/Kaine665/weight-agent/releases)** 里的 **GitHub Release**（带版本号、可挂附件），**不是** Actions 里某次运行的 **Artifacts**。本仓库用 CI 自动创建/更新这些 Release，因此合并到 `main` 并跑绿 CI 后，**打开上面这个 Releases 链接**即可下载 **Latest build (main)** 里的 APK（`weight-agent-release.apk`）。若 Releases 仍为空，说明尚未有一次成功的 **`Publish Latest (main)`** 或未合并带该工作流的 `main`；**Actions 里的产物**只是构建缓存，不会单独出现在主页 Releases 栏。
+GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对应的是 **[Releases 页面](https://github.com/Kaine665/weight-agent/releases)** 里的 **GitHub Release**（带版本号、可挂附件），**不是** Actions 里某次运行的 **Artifacts**。本仓库用 CI 自动创建/更新这些 Release：滚动发布条目标题为 **`录音同步 v{versionName}（main · versionCode …）`**，版本号来自 **`app/build.gradle.kts`** 的 `versionName` / `versionCode`（更新版本时改这两处即可）。合并到 `main` 并跑绿 CI 后，**打开上面这个 Releases 链接**即可下载 **`app-latest`** 上的 APK（`weight-agent-release.apk`）。若 Releases 仍为空，说明尚未有一次成功的 **`Publish Latest (main)`** 或未合并带该工作流的 `main`；**Actions 里的产物**只是构建缓存，不会单独出现在主页 Releases 栏。
 
 ## 自用场景约定（与规格书一致）
 
@@ -45,7 +45,7 @@ GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对
 
 **GitHub Releases（右侧「Releases」页）**：
 
-- **默认「最新构建」**：每次 **push 到 `main`** 且 **Android CI** 成功后，由单独工作流 **`.github/workflows/android-publish-latest.yml`**（`workflow_run`）创建/更新标签 **`app-latest`** 与发布 **「Latest build (main)」**，附件为 **`weight-agent-release.apk`**。这样 **PR 里的 Android CI** 不会出现「发布 job 被跳过」；只有合并进 `main` 后的那次构建会触发发布。在 **Actions** 里可看到 **Publish Latest (main)** 这条运行记录。
+- **默认「main 滚动发布」**：每次 **push 到 `main`** 且 **Android CI** 成功后，由 **`.github/workflows/android-publish-latest.yml`**（`workflow_run`）创建/更新标签 **`app-latest`**；**Release 标题**为 **`录音同步 v{versionName}（main · versionCode …）`**（从 `app/build.gradle.kts` 读取）。附件 **`weight-agent-release.apk`**。这样 **PR 里的 Android CI** 不会出现被跳过的发布 job；只有合并进 `main` 后的那次构建会触发发布。在 **Actions** 里可看到 **Publish Latest (main)**。
 - **版本号发布**：推送形如 **`v0.1.1`** 的 **git tag** 会触发 **`.github/workflows/android-release.yml`**，另建一条带版本名的 Release 并附上 **`app-release.apk`**。示例：
 
 ```bash

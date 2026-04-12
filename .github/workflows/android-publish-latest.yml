@@ -48,25 +48,30 @@ jobs:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -eux
+          APP_VER=$(grep -E 'versionName\s*=' app/build.gradle.kts | head -1 | sed -E 's/.*versionName\s*=\s*"([^"]+)".*/\1/')
+          APP_CODE=$(grep -E 'versionCode\s*=' app/build.gradle.kts | head -1 | sed -E 's/.*versionCode\s*=\s*([0-9]+).*/\1/')
+          test -n "$APP_VER"
+          test -n "$APP_CODE"
+          RELEASE_TITLE="录音同步 v${APP_VER}（main · versionCode ${APP_CODE}）"
           SRC=$(ls apk/*.apk | head -1)
           cp "$SRC" weight-agent-release.apk
           TAG=app-latest
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git tag -fa "$TAG" -m "Rolling release: latest main" "$HEAD_SHA"
+          git tag -fa "$TAG" -m "Rolling release: v${APP_VER} @ main" "$HEAD_SHA"
           git push origin "refs/tags/$TAG" --force
           cat > release-notes.md <<EOF
-          每次 push 到 \`main\` 且 [Android CI](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}) 成功后自动更新。
+          对应 \`app/build.gradle.kts\` 中的 **versionName \`${APP_VER}\`** / **versionCode \`${APP_CODE}\`**。每次 push 到 \`main\` 且 [Android CI](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}) 成功后自动更新此条 Release（标签固定为 \`app-latest\`）。
 
           - 提交: [\`$HEAD_SHA\`](https://github.com/${{ github.repository }}/commit/$HEAD_SHA)
           - 附件 \`weight-agent-release.apk\` 与当次 \`assembleRelease\` 一致；未配置正式 keystore 时为 **debug 证书**签名的 release 变体。
 
-          版本化发布可推送 \`v*\` 标签，由 \`android-release.yml\` 处理。
+          带 **git 标签** 的版本发布（如 \`v0.2.0\`）由 \`android-release.yml\` 另建一条 Release。
           EOF
           sed -i 's/^[[:space:]]*//' release-notes.md
           gh release create "$TAG" weight-agent-release.apk \
-            --title "Latest build (main)" \
+            --title "$RELEASE_TITLE" \
             --notes-file release-notes.md \
             --latest \
             --repo "${{ github.repository }}"
