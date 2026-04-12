@@ -1,5 +1,7 @@
 package com.weightagent.app.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -20,6 +22,9 @@ class RecordingListViewModel(
     val recordings = container.recordingDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val safTreeUriStrings = container.safFolderStore.treeUriStrings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     val isRefreshing = MutableStateFlow(false)
 
     fun refresh() {
@@ -28,6 +33,7 @@ class RecordingListViewModel(
             try {
                 container.mediaStoreScanner.refreshFromMediaStore()
                 container.xiaomiPrivateRecorderScanner.scanIfApplicable()
+                container.safTreeAudioScanner.scanPersistedTrees()
                 container.workManager.enqueueUniqueWork(
                     RefreshAndEnqueueWorker.UNIQUE_NAME,
                     ExistingWorkPolicy.KEEP,
@@ -36,6 +42,33 @@ class RecordingListViewModel(
             } finally {
                 isRefreshing.value = false
             }
+        }
+    }
+
+    fun addSafTreeFolder(uri: Uri) {
+        viewModelScope.launch {
+            runCatching {
+                container.applicationContext.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            container.safFolderStore.add(uri.toString())
+            refresh()
+        }
+    }
+
+    fun removeSafTreeFolder(uriString: String) {
+        viewModelScope.launch {
+            runCatching {
+                val u = Uri.parse(uriString)
+                container.applicationContext.contentResolver.releasePersistableUriPermission(
+                    u,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            container.safFolderStore.remove(uriString)
+            refresh()
         }
     }
 

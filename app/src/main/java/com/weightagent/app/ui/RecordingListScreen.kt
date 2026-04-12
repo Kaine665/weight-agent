@@ -1,18 +1,22 @@
 package com.weightagent.app.ui
 
 import android.Manifest
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -31,12 +35,14 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -66,7 +72,16 @@ fun RecordingListScreen(
 ) {
     val context = LocalContext.current
     val recordings by viewModel.recordings.collectAsState()
+    val safFolders by viewModel.safTreeUriStrings.collectAsState()
     val refreshing by viewModel.isRefreshing.collectAsState()
+
+    val openTreeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.addSafTreeFolder(uri)
+        }
+    }
 
     var hasAudioPermission by remember {
         mutableStateOf(
@@ -201,6 +216,77 @@ fun RecordingListScreen(
                             },
                         ) {
                             Text("我已授权，重新扫描")
+                        }
+                    }
+                }
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    ),
+                ) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            "扫描目录（文件管理器）",
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            "用系统文件管理器授权一个或多个文件夹（可反复「添加目录」）。适合录音在私有目录、自动扫描不到的情况；移除仅取消授权，不会删手机里的文件。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = { openTreeLauncher.launch(null) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Text("添加目录", modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                        if (safFolders.isNotEmpty()) {
+                            Text(
+                                "已添加 ${safFolders.size} 个目录",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                            safFolders.forEach { uriString ->
+                                key(uriString) {
+                                    val label = runCatching {
+                                        val u = Uri.parse(uriString)
+                                        u.lastPathSegment ?: uriString
+                                    }.getOrDefault(uriString)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                    ) {
+                                        Text(
+                                            label,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                        )
+                                        IconButton(
+                                            onClick = { viewModel.removeSafTreeFolder(uriString) },
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "移除目录",
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
