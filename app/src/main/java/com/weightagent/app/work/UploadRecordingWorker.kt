@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.WorkRequest
 import androidx.work.workDataOf
 import com.weightagent.app.WeightAgentApp
 import com.weightagent.app.data.cos.CosRepository
@@ -139,7 +138,7 @@ class UploadRecordingWorker(
 
         fun uniqueWorkName(mediaStoreId: Long) = "upload_recording_$mediaStoreId"
 
-        fun buildRequest(mediaStoreId: Long): WorkRequest =
+        fun buildRequest(mediaStoreId: Long): androidx.work.OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<UploadRecordingWorker>()
                 .setInputData(workDataOf(KEY_MEDIA_STORE_ID to mediaStoreId))
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)

@@ -27,9 +27,11 @@
 ### 本机构建
 
 1. 安装 Android Studio 与 SDK（含 API 34+）。
-2. 复制 `local.properties.example` 为 `local.properties`，填写 `sdk.dir`。
+2. 复制 `local.properties.example` 为 `local.properties`，填写 `sdk.dir`（指向本机 Android SDK；**勿提交**该文件）。
 3. 在项目根目录执行：`./gradlew :app:assembleDebug`  
 4. APK 路径：`app/build/outputs/apk/debug/app-debug.apk`
+
+在无 Android Studio 的环境（如 CI）中，也可将 SDK 解压到仓库旁的自定义目录，并在 `local.properties` 中写 `sdk.dir=/绝对路径`；本仓库 `.gitignore` 已忽略常见本地下载目录名 `android-sdk/`。
 
 ### 权限
 

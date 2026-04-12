@@ -38,6 +38,7 @@ class RefreshAndEnqueueWorker(
     companion object {
         const val UNIQUE_NAME = "refresh_and_enqueue"
 
-        fun buildRequest() = OneTimeWorkRequestBuilder<RefreshAndEnqueueWorker>().build()
+        fun buildRequest(): androidx.work.OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<RefreshAndEnqueueWorker>().build()
     }
 }

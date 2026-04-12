@@ -132,11 +132,12 @@ fun CosConfigScreen(
                 Text("保存")
             }
 
-            if (!ui.message.isNullOrBlank()) {
+            val msg = ui.message
+            if (!msg.isNullOrBlank()) {
                 Text(
-                    ui.message,
+                    msg,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (ui.message.startsWith("已保存") || ui.message.startsWith("测试连接成功")) {
+                    color = if (msg.startsWith("已保存") || msg.startsWith("测试连接成功")) {
                         MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.onSurface

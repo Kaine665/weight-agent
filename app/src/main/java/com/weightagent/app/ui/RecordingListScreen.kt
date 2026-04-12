@@ -14,18 +14,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,8 +45,6 @@ import androidx.navigation.NavController
 import com.weightagent.app.data.db.RecordingEntity
 import com.weightagent.app.data.db.SyncStatus
 import com.weightagent.app.ui.nav.Routes
-import androidx.compose.material.SwipeRefresh
-import androidx.compose.material.rememberSwipeRefreshState
 import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +85,7 @@ fun RecordingListScreen(
         }
     }
 
-    val swipeState = rememberSwipeRefreshState(isRefreshing = refreshing)
+    val pullState = rememberPullToRefreshState()
 
     Scaffold(
         topBar = {
@@ -133,9 +133,10 @@ fun RecordingListScreen(
             return@Scaffold
         }
 
-        SwipeRefresh(
-            state = swipeState,
+        PullToRefreshBox(
+            isRefreshing = refreshing,
             onRefresh = { viewModel.refresh() },
+            state = pullState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),

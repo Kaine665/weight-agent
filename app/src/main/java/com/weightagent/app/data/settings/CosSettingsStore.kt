@@ -3,20 +3,26 @@ package com.weightagent.app.data.settings
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.security.crypto.MasterKeys
+import java.security.GeneralSecurityException
 
 class CosSettingsStore(context: Context) {
 
     private val prefs: SharedPreferences
 
     init {
-        val masterKey = MasterKey.Builder(context.applicationContext)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+        val appContext = context.applicationContext
+        val masterKeyAlias = try {
+            MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+        } catch (e: GeneralSecurityException) {
+            throw RuntimeException("无法创建加密主密钥", e)
+        } catch (e: java.io.IOException) {
+            throw RuntimeException("无法创建加密主密钥", e)
+        }
         prefs = EncryptedSharedPreferences.create(
-            context.applicationContext,
             PREFS_NAME,
-            masterKey,
+            masterKeyAlias,
+            appContext,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )

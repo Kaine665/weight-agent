@@ -3,6 +3,9 @@
 build/
 **/build/
 
+# Local Android SDK (CI / agent download; do not commit)
+android-sdk/
+
 # Android Studio / IDEA
 .idea/
 *.iml

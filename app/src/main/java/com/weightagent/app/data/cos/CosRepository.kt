@@ -4,6 +4,8 @@ import android.content.Context
 import com.tencent.cos.xml.exception.CosXmlClientException
 import com.tencent.cos.xml.exception.CosXmlServiceException
 import com.tencent.cos.xml.listener.CosXmlResultListener
+import com.tencent.cos.xml.model.CosXmlRequest
+import com.tencent.cos.xml.model.CosXmlResult
 import com.tencent.cos.xml.model.bucket.HeadBucketRequest
 import com.tencent.cos.xml.transfer.COSXMLUploadTask
 import com.tencent.cos.xml.transfer.TransferConfig
@@ -22,12 +24,12 @@ class CosRepository(private val context: Context) {
         val request = HeadBucketRequest(settings.bucket.trim())
         suspendCancellableCoroutine { cont ->
             cosXmlService.headBucketAsync(request, object : CosXmlResultListener {
-                override fun onSuccess(requestId: String?, result: com.tencent.cos.xml.model.CosXmlResult?) {
+                override fun onSuccess(request: CosXmlRequest, result: CosXmlResult) {
                     if (cont.isActive) cont.resume(Unit)
                 }
 
                 override fun onFail(
-                    requestId: String?,
+                    request: CosXmlRequest,
                     clientException: CosXmlClientException?,
                     serviceException: CosXmlServiceException?,
                 ) {
@@ -59,22 +61,20 @@ class CosRepository(private val context: Context) {
                 null,
             )
             task.setCosXmlResultListener(object : CosXmlResultListener {
-                override fun onSuccess(requestId: String?, result: com.tencent.cos.xml.model.CosXmlResult?) {
+                override fun onSuccess(request: CosXmlRequest, result: CosXmlResult) {
                     val uploadResult = result as? COSXMLUploadTask.COSXMLUploadTaskResult
                     val etag = uploadResult?.eTag
-                    val crc64 = uploadResult?.crc64ecma
                     if (cont.isActive) {
                         cont.resume(
                             UploadOutcome(
                                 etag = etag,
-                                crc64 = crc64,
                             ),
                         )
                     }
                 }
 
                 override fun onFail(
-                    requestId: String?,
+                    request: CosXmlRequest,
                     clientException: CosXmlClientException?,
                     serviceException: CosXmlServiceException?,
                 ) {
@@ -93,6 +93,5 @@ class CosRepository(private val context: Context) {
 
     data class UploadOutcome(
         val etag: String?,
-        val crc64: String?,
     )
 }
