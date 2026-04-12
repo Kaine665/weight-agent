@@ -28,14 +28,16 @@
 
 1. 安装 Android Studio 与 SDK（含 API 34+）。
 2. 复制 `local.properties.example` 为 `local.properties`，填写 `sdk.dir`（指向本机 Android SDK；**勿提交**该文件）。
-3. 在项目根目录执行：`./gradlew :app:assembleDebug`  
-4. APK 路径：`app/build/outputs/apk/debug/app-debug.apk`
+3. 在项目根目录执行：  
+   - Debug：`./gradlew :app:assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk`  
+   - Release：`./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk`  
+4. **Release 签名**：若仓库根目录存在 **`release.keystore`** 与 **`keystore.properties`**（见 `keystore.properties.example`），则 release 使用正式签名；否则 **release 与 debug 共用 debug 签名**（便于 CI 无密钥时仍能产出 release 包，仅供自用侧载）。也可不设文件，改为环境变量：`ANDROID_KEYSTORE_FILE`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_PASSWORD`、`ANDROID_KEY_ALIAS`。
 
 在无 Android Studio 的环境（如 CI）中，也可将 SDK 解压到仓库旁的自定义目录，并在 `local.properties` 中写 `sdk.dir=/绝对路径`；本仓库 `.gitignore` 已忽略常见本地下载目录名 `android-sdk/`。
 
 ### GitHub Actions
 
-对 `main` 的 **push**/**pull_request** 会触发 **Android CI**（见 `.github/workflows/android-build.yml`）：安装 SDK、执行 `./gradlew :app:assembleDebug` 与 `:app:testDebugUnitTest`，并将 **`app-debug-apk`** 构件（`app-debug.apk`）上传到该次运行的 **Artifacts**。
+对 `main` 的 **push**/**pull_request** 会触发 **Android CI**（见 `.github/workflows/android-build.yml`）：安装 SDK、执行 `./gradlew :app:assembleDebug`、`:app:assembleRelease` 与 `:app:testDebugUnitTest`，并将构件 **`app-debug-apk`** 与 **`app-release-apk`** 上传到该次运行的 **Artifacts**。默认 CI 上的 release 为 **debug 证书签名**；若要在 CI 中使用正式证书，请在仓库 **Settings → Secrets and variables → Actions** 中配置 `ANDROID_KEYSTORE_*` 并在工作流中安全注入 keystore 文件。
 
 ### 权限
 

@@ -53,6 +53,9 @@ jobs:
       - name: Assemble Debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
+      - name: Assemble Release APK
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
 
@@ -61,4 +64,11 @@ jobs:
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
