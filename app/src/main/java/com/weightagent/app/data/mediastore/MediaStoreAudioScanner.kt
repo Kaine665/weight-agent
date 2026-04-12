@@ -36,14 +36,19 @@ class MediaStoreAudioScanner(
     private suspend fun scanAudioMedia(volume: String): Int {
         val resolver = context.contentResolver
         val collection = MediaStore.Audio.Media.getContentUri(volume)
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.DISPLAY_NAME,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATE_MODIFIED,
-            MediaStore.Audio.Media.SIZE,
-            MediaStore.Audio.Media.MIME_TYPE,
-        )
+        val projection = buildList {
+            add(MediaStore.Audio.Media._ID)
+            add(MediaStore.Audio.Media.DISPLAY_NAME)
+            add(MediaStore.Audio.Media.DURATION)
+            add(MediaStore.Audio.Media.DATE_MODIFIED)
+            add(MediaStore.Audio.Media.SIZE)
+            add(MediaStore.Audio.Media.MIME_TYPE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(MediaStore.Audio.Media.RELATIVE_PATH)
+            }
+            @Suppress("DEPRECATION")
+            add(MediaStore.Audio.Media.DATA)
+        }.toTypedArray()
         val selection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             "(${MediaStore.Audio.Media.IS_PENDING} IS NULL OR ${MediaStore.Audio.Media.IS_PENDING} = 0)"
         } else {
@@ -63,13 +68,20 @@ class MediaStoreAudioScanner(
             val modCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
             val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
             val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
+            val relCol = cursor.getColumnIndex(MediaStore.Audio.Media.RELATIVE_PATH)
+            val dataCol = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
             while (cursor.moveToNext()) {
                 val mime = cursor.getString(mimeCol)
                 if (mime != null && mime.startsWith("video/", ignoreCase = true)) {
                     continue
                 }
-                val id = cursor.getLong(idCol)
                 val name = cursor.getString(nameCol) ?: "recording"
+                val rel = if (relCol >= 0) cursor.getString(relCol) else null
+                val data = if (dataCol >= 0) cursor.getString(dataCol) else null
+                if (MediaPathFilters.shouldSkipMediaPath(rel, data, name)) {
+                    continue
+                }
+                val id = cursor.getLong(idCol)
                 val duration = cursor.getLong(durCol)
                 val modifiedSec = cursor.getLong(modCol)
                 val size = cursor.getLong(sizeCol)
@@ -94,14 +106,19 @@ class MediaStoreAudioScanner(
         }
         val resolver = context.contentResolver
         val collection = MediaStore.Files.getContentUri(volume)
-        val projection = arrayOf(
-            MediaStore.Files.FileColumns._ID,
-            MediaStore.Files.FileColumns.DISPLAY_NAME,
-            MediaStore.Files.FileColumns.DATE_MODIFIED,
-            MediaStore.Files.FileColumns.SIZE,
-            MediaStore.Files.FileColumns.MIME_TYPE,
-            MediaStore.Files.FileColumns.DURATION,
-        )
+        val projection = buildList {
+            add(MediaStore.Files.FileColumns._ID)
+            add(MediaStore.Files.FileColumns.DISPLAY_NAME)
+            add(MediaStore.Files.FileColumns.DATE_MODIFIED)
+            add(MediaStore.Files.FileColumns.SIZE)
+            add(MediaStore.Files.FileColumns.MIME_TYPE)
+            add(MediaStore.Files.FileColumns.DURATION)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(MediaStore.Files.FileColumns.RELATIVE_PATH)
+            }
+            @Suppress("DEPRECATION")
+            add(MediaStore.Files.FileColumns.DATA)
+        }.toTypedArray()
         val pending = "(${MediaStore.Files.FileColumns.IS_PENDING} IS NULL OR ${MediaStore.Files.FileColumns.IS_PENDING} = 0)"
         val type = "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO}"
         val selection = "$type AND $pending"
@@ -119,14 +136,21 @@ class MediaStoreAudioScanner(
             val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
             val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
             val durCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DURATION)
+            val relCol = cursor.getColumnIndex(MediaStore.Files.FileColumns.RELATIVE_PATH)
+            val dataCol = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
             while (cursor.moveToNext()) {
                 val mime = cursor.getString(mimeCol)
                 if (mime != null && mime.startsWith("video/", ignoreCase = true)) {
                     continue
                 }
+                val name = cursor.getString(nameCol) ?: "recording"
+                val rel = if (relCol >= 0) cursor.getString(relCol) else null
+                val data = if (dataCol >= 0) cursor.getString(dataCol) else null
+                if (MediaPathFilters.shouldSkipMediaPath(rel, data, name)) {
+                    continue
+                }
                 val fileId = cursor.getLong(idCol)
                 val syntheticId = syntheticIdForFilesRow(fileId)
-                val name = cursor.getString(nameCol) ?: "recording"
                 val duration = if (durCol >= 0) cursor.getLong(durCol) else 0L
                 val modifiedSec = cursor.getLong(modCol)
                 val size = cursor.getLong(sizeCol)
