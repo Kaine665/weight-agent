@@ -1,0 +1,20 @@
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local Android SDK (CI / agent download; do not commit)
+android-sdk/
+
+# Android Studio / IDEA
+.idea/
+*.iml
+local.properties
+!local.properties.example
+captures/
+
+# Kotlin
+.kotlin/
+
+# OS
+.DS_Store
