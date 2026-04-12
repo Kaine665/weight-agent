@@ -35,14 +35,14 @@ GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对
 3. 在项目根目录执行：  
    - Debug：`./gradlew :app:assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk`  
    - Release：`./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk`  
-4. **Release 签名**：若仓库根目录存在 **`release.keystore`** 与 **`keystore.properties`**（见 `keystore.properties.example`），则 release 使用正式签名；否则 **release 与 debug 共用 debug 签名**（便于 CI 无密钥时仍能产出 release 包，仅供自用侧载）。也可不设文件，改为环境变量：`ANDROID_KEYSTORE_FILE`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_PASSWORD`、`ANDROID_KEY_ALIAS`。  
+4. **签名（避免「与已安装应用签名不同」）**：**debug** 与**未配置正式 keystore 时的 release** 均使用仓库内 **`keystores/ci-debug.keystore`**（与 Android 默认 debug 口令一致：`android` / `androiddebugkey`），与 **GitHub Actions 打出的 APK 同签名**，可直接覆盖安装。若你手机里已是**以前用本机默认 debug.keystore 装的旧包**，请先**卸载**再装。正式分发请配置 **`keystore.properties` + `release.keystore`**（勿提交私钥）。  
 5. **版本号**：平时开发可手动改 `versionCode` / `versionName`；**`main` 上 CI 成功后会自动 patch 自增**（见上文），本地拉取 `main` 即可获得与 Releases 一致的版本。
 
 在无 Android Studio 的环境（如 CI）中，也可将 SDK 解压到仓库旁的自定义目录，并在 `local.properties` 中写 `sdk.dir=/绝对路径`；本仓库 `.gitignore` 已忽略常见本地下载目录名 `android-sdk/`。
 
 ### GitHub Actions
 
-对 `main` 的 **push**/**pull_request** 会触发 **Android CI**（见 `.github/workflows/android-build.yml`）：安装 SDK、执行 `./gradlew :app:assembleDebug`、`:app:assembleRelease` 与 `:app:testDebugUnitTest`，并将构件 **`app-debug-apk`** 与 **`app-release-apk`** 上传到该次运行的 **Artifacts**（路径：**Actions** → 点开某次运行 → 页面底部的 **Artifacts**）。默认 CI 上的 release 为 **debug 证书签名**；若要在 CI 中使用正式证书，请在仓库 **Settings → Secrets and variables → Actions** 中配置 `ANDROID_KEYSTORE_*` 并在工作流中安全注入 keystore 文件。
+对 `main` 的 **push**/**pull_request** 会触发 **Android CI**（见 `.github/workflows/android-build.yml`）：安装 SDK、执行 `./gradlew :app:assembleDebug`、`:app:assembleRelease` 与 `:app:testDebugUnitTest`，并将构件 **`app-debug-apk`** 与 **`app-release-apk`** 上传到该次运行的 **Artifacts**（路径：**Actions** → 点开某次运行 → 页面底部的 **Artifacts**）。未配置 `release.keystore` 时，CI 的 release 与 **debug 同为 `ci-debug.keystore` 签名**；若要在 CI 使用正式证书，请配置 `ANDROID_KEYSTORE_*` 等。
 
 **GitHub Releases（右侧「Releases」页）**：
 
