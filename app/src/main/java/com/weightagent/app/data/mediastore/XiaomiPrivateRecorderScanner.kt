@@ -70,15 +70,16 @@ class XiaomiPrivateRecorderScanner(
             "com.miui.voicerecord",
             "com.miui.audiomonitor",
         )
-        // 动态：仅包名明确含录音机关键词（避免 miui+record 误匹配飞书等）
+        // 动态：包名像录音机的应用目录（不排除第三方会议录音来源）
         try {
             @Suppress("DEPRECATION")
             val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
             for (app in apps) {
                 val pkg = app.packageName.lowercase()
                 if (pkg in knownPkgs.map { it.lowercase() }) continue
-                if (MediaPathFilters.shouldSkipMediaPath(null, app.packageName, null)) continue
-                if (pkg.contains("soundrecorder") || pkg.contains("sound_recorder") || pkg.contains("voicerecord")) {
+                if (pkg.contains("soundrecorder") || pkg.contains("sound_recorder") ||
+                    pkg.contains("voicerecord") || (pkg.contains("miui") && pkg.contains("record"))
+                ) {
                     knownPkgs.add(app.packageName)
                 }
             }
@@ -99,7 +100,6 @@ class XiaomiPrivateRecorderScanner(
         }
 
         for (pkg in knownPkgs.distinct()) {
-            if (MediaPathFilters.shouldSkipMediaPath(null, pkg, null)) continue
             addUnique(File(androidData, "$pkg/files"))
             addUnique(File(androidData, pkg))
             // Android 10+ 推荐媒体子目录
@@ -108,13 +108,14 @@ class XiaomiPrivateRecorderScanner(
             addUnique(File(ext, "Android/media/$pkg/files"))
         }
 
-        // 兜底：仅目录名含 soundrecorder / voicerecord（避免误扫含 record 的其它包）
+        // 兜底：目录名含 sound / record 且像系统侧包
         runCatching {
             androidData.listFiles()?.forEach { child ->
                 if (!child.isDirectory) return@forEach
                 val n = child.name.lowercase()
-                if (MediaPathFilters.shouldSkipMediaPath(null, child.absolutePath, null)) return@forEach
-                if (n.contains("soundrecorder") || n.contains("voicerecord")) {
+                if (n.contains("soundrecorder") || n.contains("voicerecord") ||
+                    (n.contains("record") && (n.contains("miui") || n.contains("com.android")))
+                ) {
                     addUnique(File(child, "files"))
                     addUnique(child)
                 }
@@ -136,9 +137,6 @@ class XiaomiPrivateRecorderScanner(
             if (f.isDirectory) {
                 n += walkAudioFiles(f, maxDepth, depth + 1)
             } else if (f.isFile && isAudioExtension(f.name)) {
-                if (MediaPathFilters.shouldSkipFileAbsolutePath(f.absolutePath, f.name)) {
-                    continue
-                }
                 upsertRawFile(f)
                 n++
             }
