@@ -1,0 +1,72 @@
+# 仅在「push 到 main 且 Android CI 成功」后更新 Releases，避免在 PR 的同一工作流里出现 Skipped job
+name: Publish Latest (main)
+
+on:
+  workflow_run:
+    workflows: ["Android CI"]
+    types: [completed]
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: publish-latest-main
+  cancel-in-progress: true
+
+jobs:
+  publish-latest-release:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      (github.event.workflow_run.event == 'push' ||
+       github.event.workflow_run.event == 'workflow_dispatch')
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout (for rolling tag)
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Download Release APK from triggering run
+        uses: actions/download-artifact@v8
+        with:
+          name: app-release-apk
+          path: apk
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Create or update rolling GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eux
+          SRC=$(ls apk/*.apk | head -1)
+          cp "$SRC" weight-agent-release.apk
+          TAG=app-latest
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git tag -fa "$TAG" -m "Rolling release: latest main" "$HEAD_SHA"
+          git push origin "refs/tags/$TAG" --force
+          cat > release-notes.md <<EOF
+          每次 push 到 \`main\` 且 [Android CI](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}) 成功后自动更新。
+
+          - 提交: [\`$HEAD_SHA\`](https://github.com/${{ github.repository }}/commit/$HEAD_SHA)
+          - 附件 \`weight-agent-release.apk\` 与当次 \`assembleRelease\` 一致；未配置正式 keystore 时为 **debug 证书**签名的 release 变体。
+
+          版本化发布可推送 \`v*\` 标签，由 \`android-release.yml\` 处理。
+          EOF
+          sed -i 's/^[[:space:]]*//' release-notes.md
+          gh release create "$TAG" weight-agent-release.apk \
+            --title "Latest build (main)" \
+            --notes-file release-notes.md \
+            --latest \
+            --repo "${{ github.repository }}"
