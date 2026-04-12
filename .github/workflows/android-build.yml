@@ -11,9 +11,16 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# main 上勿用「同一 ref」作并发键：合并会触发 CI，随后 bot 推送 [skip ci] 的版本提交会再触发一次，
+# 若 cancel-in-progress 为 true，会把**正在跑的合并构建**取消，导致无 Artifacts、Publish Release 不跑。
 concurrency:
-  group: android-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: >-
+    android-ci-${{ github.workflow }}-${{
+      github.event_name == 'pull_request'
+        && format('pr-{0}', github.event.pull_request.number)
+        || github.sha
+    }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
