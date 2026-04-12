@@ -1,9 +1,31 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun releaseKeystoreFile(): java.io.File? {
+    val path = System.getenv("ANDROID_KEYSTORE_FILE")
+        ?: keystoreProperties.getProperty("storeFile")
+        ?: "release.keystore"
+    val f = rootProject.file(path)
+    return f.takeIf { it.isFile }
+}
+
+fun propOrEnv(key: String, envName: String): String =
+    System.getenv(envName)?.trim().orEmpty().ifBlank {
+        keystoreProperties.getProperty(key)?.trim().orEmpty()
+    }
 
 android {
     namespace = "com.weightagent.app"
@@ -13,9 +35,24 @@ android {
         applicationId = "com.weightagent.app"
         minSdk = 34
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        val kf = releaseKeystoreFile()
+        val storePwd = propOrEnv("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+        val keyPwd = propOrEnv("keyPassword", "ANDROID_KEY_PASSWORD")
+        val alias = propOrEnv("keyAlias", "ANDROID_KEY_ALIAS")
+        if (kf != null && storePwd.isNotBlank() && keyPwd.isNotBlank() && alias.isNotBlank()) {
+            create("release") {
+                storeFile = kf
+                storePassword = storePwd
+                keyAlias = alias
+                keyPassword = keyPwd
+            }
+        }
     }
 
     buildTypes {
@@ -25,6 +62,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            val kf = releaseKeystoreFile()
+            val storePwd = propOrEnv("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+            val keyPwd = propOrEnv("keyPassword", "ANDROID_KEY_PASSWORD")
+            val alias = propOrEnv("keyAlias", "ANDROID_KEY_ALIAS")
+            signingConfig = if (kf != null && storePwd.isNotBlank() && keyPwd.isNotBlank() && alias.isNotBlank()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {

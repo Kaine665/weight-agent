@@ -11,6 +11,9 @@ android-sdk/
 *.iml
 local.properties
 !local.properties.example
+keystore.properties
+release.keystore
+*.jks
 captures/
 
 # Kotlin
