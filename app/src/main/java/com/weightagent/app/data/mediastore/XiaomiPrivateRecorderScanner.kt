@@ -68,8 +68,9 @@ class XiaomiPrivateRecorderScanner(
             "com.android.soundrecorder",
             "com.miui.soundrecorder",
             "com.miui.voicerecord",
+            "com.miui.audiomonitor",
         )
-        // 动态：已安装且包名像录音机的应用目录
+        // 动态：包名像录音机的应用目录（不排除第三方会议录音来源）
         try {
             @Suppress("DEPRECATION")
             val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
@@ -107,7 +108,7 @@ class XiaomiPrivateRecorderScanner(
             addUnique(File(ext, "Android/media/$pkg/files"))
         }
 
-        // 兜底：遍历 Android/data 下目录名含 sound / record 的包
+        // 兜底：目录名含 sound / record 且像系统侧包
         runCatching {
             androidData.listFiles()?.forEach { child ->
                 if (!child.isDirectory) return@forEach

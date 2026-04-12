@@ -35,8 +35,8 @@ android {
         applicationId = "com.weightagent.app"
         minSdk = 34
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.1.11"
+        versionCode = 14
+        versionName = "0.1.13"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

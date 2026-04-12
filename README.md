@@ -77,7 +77,7 @@ git push origin v0.1.1
 ### 已知限制（与 SPEC 非目标一致）
 
 - 仅 **腾讯云 COS**，无多云。
-- 以 **MediaStore 可见**音频为主；**小米系**还会扫描公共目录 **`MIUI/sound_recorder`**、**`Recordings/SoundRecorder`** 等；在授予 **全部文件访问** 后额外扫 **`Android/data`/`Android/media` 下录音相关包**（含已安装包名匹配、固定包名兜底）。扫描 **Audio.Media** 与 **Files（MEDIA_TYPE_AUDIO）**；**IS_PENDING** 接受 **NULL** 与 `0`；不按 MIME 在 SQL 里限制为 `audio/*`；跳过 `video/*`。上传支持 **`content://`** 与 **`file://`**。
+- 以 **MediaStore 可见**音频为主（**不**按应用来源排除飞书等第三方录音）；**小米系**还会扫描公共目录 **`MIUI/sound_recorder`**、**`Recordings/SoundRecorder`** 等；在授予 **全部文件访问** 后额外扫 **`Android/data`/`Android/media` 下录音相关包**。**m4a 等格式不排除**。扫描 **Audio.Media** 与 **Files（MEDIA_TYPE_AUDIO）**；**IS_PENDING** 接受 **NULL** 与 `0`；不按 MIME 在 SQL 里限制为 `audio/*`；跳过 `video/*`。上传支持 **`content://`** 与 **`file://`**。
 - 断网、杀进程依赖 **WorkManager** 重试与用户再次打开 App 触发巡检；不承诺秒级上传。
 - 清除应用数据会丢失本地配置与队列状态；云端已存在对象**不会**自动与本地对齐（SPEC 用例 10）。
 
