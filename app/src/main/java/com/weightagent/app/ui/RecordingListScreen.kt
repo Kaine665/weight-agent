@@ -177,8 +177,8 @@ fun RecordingListScreen(
             return@Scaffold
         }
 
-        val showXiaomiAllFilesBanner = OemDevice.isXiaomiFamily() &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+        // Android 11+：私有目录（如 Android/data）无法通过 SAF 授权，需「全部文件访问」后由应用直接扫描。
+        val showAllFilesAccessBanner = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
             hasAudioPermission &&
             !hasAllFilesAccess
 
@@ -191,7 +191,7 @@ fun RecordingListScreen(
                 .padding(padding),
         ) {
             Column(Modifier.fillMaxSize()) {
-                if (showXiaomiAllFilesBanner) {
+                if (showAllFilesAccessBanner) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -199,7 +199,11 @@ fun RecordingListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            "检测到小米/红米：新录音常在「Android/data/…」私有目录，未进媒体库。请开启「全部文件访问权限」后下拉刷新；否则只能扫公共目录（如 MIUI/sound_recorder）。",
+                            if (OemDevice.isXiaomiFamily()) {
+                                "第一步：开启「全部文件访问权限」。小米等机型上录音常在「Android/data/…」私有目录，系统不允许用下方「添加目录」授权这类路径；必须先开全部文件访问，应用才能直接扫描，再下拉刷新。"
+                            } else {
+                                "第一步：开启「全部文件访问权限」。录音若在应用私有目录（如 Android/data/…），系统不允许通过下方「添加目录」授权；需先开全部文件访问后由应用扫描，再下拉刷新。"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -233,11 +237,19 @@ fun RecordingListScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(
-                            "扫描目录（文件管理器）",
+                            "第二步（可选）：扫描目录（文件管理器）",
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
-                            "用系统文件管理器授权一个或多个文件夹（可反复「添加目录」）。若系统提示「为了保护您的隐私，请选择其他文件夹」，说明当前路径属于系统禁止 SAF 授权的范围（常见为 Android/data、Android/obb）；请改选 **Download、Recordings、MIUI** 等公共目录，或先开启上方「全部文件访问」后用自动扫描。移除仅取消本应用授权，不会删手机里的文件。",
+                            buildString {
+                                if (showAllFilesAccessBanner) {
+                                    append("请先完成上方「全部文件访问」；私有目录无法在此处授权。")
+                                    append("\n\n")
+                                }
+                                append(
+                                    "若仍有遗漏，可用系统文件管理器添加 **公共** 文件夹（可多次「添加目录」）。若提示「为了保护您的隐私，请选择其他文件夹」，说明路径在 Android/data 等受保护范围，请改选 Download、Recordings、MIUI/sound_recorder 等，或依赖上方全部文件访问后的自动扫描。移除仅取消本应用授权，不会删手机里的文件。",
+                                )
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -299,7 +311,7 @@ fun RecordingListScreen(
                             .padding(24.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        if (showXiaomiAllFilesBanner) {
+                        if (showAllFilesAccessBanner) {
                             Text(
                                 "当前未扫描到录音。请先完成上方「全部文件访问」再下拉刷新；若已开启仍为空，请到系统录音机里查看「保存路径」是否指向本机可访问目录。",
                                 style = MaterialTheme.typography.bodyLarge,
