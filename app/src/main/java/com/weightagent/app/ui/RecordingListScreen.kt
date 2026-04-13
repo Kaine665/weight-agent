@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -26,11 +27,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -56,6 +60,7 @@ import androidx.navigation.NavController
 import com.weightagent.app.data.db.RecordingEntity
 import com.weightagent.app.data.db.SyncStatus
 import com.weightagent.app.data.device.OemDevice
+import com.weightagent.app.data.saf.SafOpenHelper
 import com.weightagent.app.data.storage.AllFilesAccessHelper
 import com.weightagent.app.ui.nav.Routes
 import java.util.concurrent.TimeUnit
@@ -130,11 +135,20 @@ fun RecordingListScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
 
+    var showSafSheet by remember { mutableStateOf(false) }
+    val safSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("录音列表") },
                 actions = {
+                    IconButton(
+                        onClick = { showSafSheet = true },
+                        enabled = hasAudioPermission,
+                    ) {
+                        Icon(Icons.Default.Folder, contentDescription = "扫描目录")
+                    }
                     IconButton(onClick = { viewModel.refresh() }, enabled = hasAudioPermission) {
                         Icon(Icons.Default.Refresh, contentDescription = "刷新")
                     }
@@ -219,77 +233,6 @@ fun RecordingListScreen(
                         }
                     }
                 }
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                    ),
-                ) {
-                    Column(
-                        Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Text(
-                            "扫描目录（文件管理器）",
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            "用系统文件管理器授权一个或多个文件夹（可反复「添加目录」）。适合录音在私有目录、自动扫描不到的情况；移除仅取消授权，不会删手机里的文件。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Button(
-                            onClick = { openTreeLauncher.launch(null) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Text("添加目录", modifier = Modifier.padding(start = 8.dp))
-                            }
-                        }
-                        if (safFolders.isNotEmpty()) {
-                            Text(
-                                "已添加 ${safFolders.size} 个目录",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.secondary,
-                            )
-                            safFolders.forEach { uriString ->
-                                key(uriString) {
-                                    val label = runCatching {
-                                        val u = Uri.parse(uriString)
-                                        u.lastPathSegment ?: uriString
-                                    }.getOrDefault(uriString)
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                    ) {
-                                        Text(
-                                            label,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f).padding(end = 8.dp),
-                                        )
-                                        IconButton(
-                                            onClick = { viewModel.removeSafTreeFolder(uriString) },
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = "移除目录",
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
                 if (recordings.isEmpty()) {
                     Column(
                         modifier = Modifier
@@ -323,6 +266,85 @@ fun RecordingListScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+
+    if (hasAudioPermission && showSafSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSafSheet = false },
+            sheetState = safSheetState,
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    "扫描目录（文件管理器）",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    "用系统文件管理器授权一个或多个公共文件夹；Android/data 等路径系统不允许在此授权。移除仅取消本应用授权，不会删除手机里的文件。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(
+                    onClick = { openTreeLauncher.launch(SafOpenHelper.initialTreeUriForPicker()) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Text("添加目录", modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+                if (safFolders.isNotEmpty()) {
+                    Text(
+                        "已添加 ${safFolders.size} 个目录",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                    safFolders.forEach { uriString ->
+                        key(uriString) {
+                            val label = runCatching {
+                                val u = Uri.parse(uriString)
+                                u.lastPathSegment ?: uriString
+                            }.getOrDefault(uriString)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                )
+                                IconButton(
+                                    onClick = { viewModel.removeSafTreeFolder(uriString) },
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "移除目录",
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                TextButton(
+                    onClick = { showSafSheet = false },
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text("完成")
                 }
             }
         }
