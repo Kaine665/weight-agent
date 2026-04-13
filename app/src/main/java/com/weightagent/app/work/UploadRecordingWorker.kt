@@ -7,7 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.weightagent.app.WeightAgentApp
-import com.weightagent.app.data.cloud.CloudStorageKind
+import com.weightagent.app.data.cos.CosRepository
 import com.weightagent.app.data.db.RecordingDao
 import com.weightagent.app.data.db.RecordingEntity
 import com.weightagent.app.data.db.SyncStatus
@@ -29,9 +29,11 @@ class UploadRecordingWorker(
         if (mediaStoreId < 0) return Result.failure()
 
         val dao = container.recordingDao
-        val gateway = container.cloudUploadGateway
+        val settingsStore = container.cosSettingsStore
+        val cosRepository = container.cosRepository
 
-        if (!gateway.isReadyToUpload()) {
+        val settings = settingsStore.read()
+        if (settings == null || !settings.isComplete()) {
             markWaitingForConfig(dao, mediaStoreId)
             return Result.success()
         }
@@ -54,11 +56,8 @@ class UploadRecordingWorker(
         )
         dao.update(working)
 
-        val kind = container.cloudStorageSelectionStore.readKindOrNull()
-            ?: return Result.success()
-        val cosSettings = container.cosSettingsStore.read()
-        val aliyunSettings = container.aliyunDriveSettingsStore.read()
-        val remotePath = UploadRemotePath.build(kind, cosSettings, aliyunSettings, entity)
+        val objectKey = entity.objectKey?.takeIf { it.isNotBlank() }
+            ?: buildObjectKey(settings.normalizedPrefix, entity)
 
         return try {
             val cacheName = "upload_${entity.recordingUuid}.bin"
@@ -67,12 +66,16 @@ class UploadRecordingWorker(
                 android.net.Uri.parse(entity.contentUri),
                 cacheName,
             )
-            val outcome = gateway.uploadFile(localFile.absolutePath, remotePath)
+            val outcome = cosRepository.uploadFile(
+                settings = settings,
+                localAbsolutePath = localFile.absolutePath,
+                objectKey = objectKey,
+            )
             runCatching { localFile.delete() }
 
             val done = entity.copy(
                 syncStatus = SyncStatus.SYNCED,
-                objectKey = remotePath,
+                objectKey = objectKey,
                 etag = outcome.etag,
                 remoteSizeBytes = stable.sizeBytes,
                 lastError = null,
@@ -84,7 +87,7 @@ class UploadRecordingWorker(
             Log.e(TAG, "upload failed for mediaStoreId=$mediaStoreId", t)
             val failed = entity.copy(
                 syncStatus = SyncStatus.FAILED,
-                objectKey = remotePath,
+                objectKey = objectKey,
                 lastError = humanMessage(t),
             )
             dao.update(failed)
@@ -95,15 +98,10 @@ class UploadRecordingWorker(
     private suspend fun markWaitingForConfig(dao: RecordingDao, mediaStoreId: Long) {
         val e = dao.getById(mediaStoreId) ?: return
         if (e.syncStatus == SyncStatus.SYNCED) return
-        val hint = when (container.cloudStorageSelectionStore.readKindOrNull()) {
-            null -> "请先在「选择云端」中选定上传方式并完成配置"
-            CloudStorageKind.OBJECT_COS -> "请先完成腾讯云 COS 配置并保存"
-            CloudStorageKind.CONSUMER_ALIYUN_DRIVE -> "请先完成阿里云盘配置并保存 refresh_token"
-        }
         dao.update(
             e.copy(
                 syncStatus = SyncStatus.PAUSED,
-                lastError = hint,
+                lastError = "请先完成腾讯云 COS 配置并保存",
             ),
         )
     }

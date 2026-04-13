@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -29,7 +28,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.weightagent.app.ui.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,15 +40,6 @@ fun CosConfigScreen(
     ),
 ) {
     val ui by viewModel.ui.collectAsState()
-
-    LaunchedEffect(ui.message) {
-        if (ui.message == "已保存") {
-            navController.navigate(Routes.LIST) {
-                popUpTo(Routes.LIST) { inclusive = true }
-                launchSingleTop = true
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
