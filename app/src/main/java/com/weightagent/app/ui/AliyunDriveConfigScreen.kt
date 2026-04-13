@@ -76,7 +76,12 @@ fun AliyunDriveConfigScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                "使用阿里云盘开放平台 refresh_token。令牌仅保存在本机加密存储；请勿分享给他人。若官方接口变更导致失败，请反馈或改用 COS。",
+                "重要：阿里云盘开发者门户自 2025 年 7 月 1 日起暂停接受个人开发者申请，个人无法再登录开发者后台新建应用领官方 token；企业对接需按门户提示发邮件联系。你截图里的弹窗即属此政策。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                "本页「refresh_token」仅适用于少数仍能通过非开发者渠道取得的令牌（例如历史授权、或第三方工具扫码，**存在封号与泄露风险，且不保证长期可用**）。令牌仅保存在本机；若无法取得或测试失败，请改用「腾讯云 COS」。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary,
             )

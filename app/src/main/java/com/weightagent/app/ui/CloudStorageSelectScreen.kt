@@ -77,6 +77,11 @@ fun CloudStorageSelectScreen(
             ) {
                 Text("消费级网盘 · 阿里云盘")
             }
+            Text(
+                "说明：阿里云盘自 2025-07-01 起暂停个人开发者申请，官方开发者 token 个人基本拿不到；网盘直连本 App 仅作权宜。个人自用上传更现实的是上面「腾讯云 COS」。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }
