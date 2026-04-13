@@ -131,6 +131,8 @@ dependencies {
 
     implementation("com.qcloud.cos:cos-android-nobeacon:5.9.50")
 
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     testImplementation("junit:junit:4.13.2")

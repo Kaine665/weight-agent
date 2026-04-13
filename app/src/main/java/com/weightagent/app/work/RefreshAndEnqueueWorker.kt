@@ -19,8 +19,7 @@ class RefreshAndEnqueueWorker(
         container.xiaomiPrivateRecorderScanner.scanIfApplicable()
         container.safTreeAudioScanner.scanPersistedTrees()
 
-        val settings = container.cosSettingsStore.read()
-        if (settings == null || !settings.isComplete()) {
+        if (!container.cloudUploadGateway.isReadyToUpload()) {
             return Result.success()
         }
 
