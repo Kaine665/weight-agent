@@ -30,6 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -102,13 +106,13 @@ fun RecordingListScreen(
     ) { granted ->
         hasAudioPermission = granted
         if (granted) {
-            viewModel.refresh()
+            viewModel.refresh(showUserFeedback = false)
         }
     }
 
     LaunchedEffect(hasAudioPermission) {
         if (hasAudioPermission) {
-            viewModel.refresh()
+            viewModel.refresh(showUserFeedback = false)
         }
     }
 
@@ -138,7 +142,27 @@ fun RecordingListScreen(
     var showSafSheet by remember { mutableStateOf(false) }
     val safSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.uiMessages.collect { msg ->
+            val needsCosAction = msg.startsWith("请先在")
+            if (needsCosAction) {
+                val result = snackbarHostState.showSnackbar(
+                    message = msg,
+                    actionLabel = "去配置",
+                    duration = SnackbarDuration.Long,
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    navController.navigate(Routes.CONFIG)
+                }
+            } else {
+                snackbarHostState.showSnackbar(msg)
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("录音列表") },
@@ -149,7 +173,10 @@ fun RecordingListScreen(
                     ) {
                         Icon(Icons.Default.Folder, contentDescription = "扫描目录")
                     }
-                    IconButton(onClick = { viewModel.refresh() }, enabled = hasAudioPermission) {
+                    IconButton(
+                        onClick = { viewModel.refresh(showUserFeedback = true) },
+                        enabled = hasAudioPermission && !refreshing,
+                    ) {
                         Icon(Icons.Default.Refresh, contentDescription = "刷新")
                     }
                     IconButton(onClick = { navController.navigate(Routes.CONFIG) }) {
@@ -197,7 +224,7 @@ fun RecordingListScreen(
 
         PullToRefreshBox(
             isRefreshing = refreshing,
-            onRefresh = { viewModel.refresh() },
+            onRefresh = { viewModel.refresh(showUserFeedback = true) },
             state = pullState,
             modifier = Modifier
                 .fillMaxSize()
@@ -226,7 +253,7 @@ fun RecordingListScreen(
                         OutlinedButton(
                             onClick = {
                                 storageRecheckKey++
-                                viewModel.refresh()
+                                viewModel.refresh(showUserFeedback = true)
                             },
                         ) {
                             Text("我已授权，重新扫描")
