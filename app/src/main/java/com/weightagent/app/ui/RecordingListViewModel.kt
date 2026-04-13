@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
+import com.weightagent.app.data.db.RecordingDeduper
 import com.weightagent.app.data.db.SyncStatus
 import com.weightagent.app.di.AppContainer
 import com.weightagent.app.work.RefreshAndEnqueueWorker
@@ -47,6 +48,7 @@ class RecordingListViewModel(
                 container.mediaStoreScanner.refreshFromMediaStore()
                 container.xiaomiPrivateRecorderScanner.scanIfApplicable()
                 container.safTreeAudioScanner.scanPersistedTrees()
+                RecordingDeduper.dedupeAfterScan(container.recordingDao)
                 container.workManager.enqueueUniqueWork(
                     RefreshAndEnqueueWorker.UNIQUE_NAME,
                     ExistingWorkPolicy.KEEP,
