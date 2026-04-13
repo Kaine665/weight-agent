@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.weightagent.app.WeightAgentApp
+import com.weightagent.app.data.db.RecordingDeduper
 
 class RefreshAndEnqueueWorker(
     appContext: Context,
@@ -19,6 +20,7 @@ class RefreshAndEnqueueWorker(
         container.mediaStoreScanner.refreshFromMediaStore()
         container.xiaomiPrivateRecorderScanner.scanIfApplicable()
         container.safTreeAudioScanner.scanPersistedTrees()
+        RecordingDeduper.dedupeAfterScan(container.recordingDao)
 
         val settings = container.cosSettingsStore.read()
         if (settings == null || !settings.isComplete()) {
