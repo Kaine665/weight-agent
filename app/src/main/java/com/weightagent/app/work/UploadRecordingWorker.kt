@@ -159,12 +159,13 @@ class UploadRecordingWorker(
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
 
+        /** 远端对象名与本地 [RecordingEntity.displayName] 一致（仅替换 COS 非法字符）；无扩展名时补 `.m4a`。 */
         internal fun buildObjectKey(prefix: String, entity: RecordingEntity): String {
             val safeName = entity.displayName
                 .replace(Regex("[\\\\/:*?\"<>|]"), "_")
                 .ifBlank { "audio" }
             val ext = if ('.' in safeName) "" else ".m4a"
-            return "${prefix}${entity.recordingUuid}_$safeName$ext"
+            return "${prefix}$safeName$ext"
         }
 
         private fun humanMessage(t: Throwable): String {
