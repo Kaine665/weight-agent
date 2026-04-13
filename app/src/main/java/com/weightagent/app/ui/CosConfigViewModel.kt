@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
-import com.weightagent.app.data.cos.CosRepository
+import com.weightagent.app.data.cloud.CloudStorageKind
 import com.weightagent.app.data.settings.CosSettings
 import com.weightagent.app.data.settings.CosSettingsStore
 import com.weightagent.app.di.AppContainer
@@ -29,21 +29,22 @@ class CosConfigViewModel(
 ) : ViewModel() {
 
     private val store: CosSettingsStore = container.cosSettingsStore
-    private val cosRepository: CosRepository = container.cosRepository
 
     private val _ui = MutableStateFlow(CosConfigUiState())
     val ui: StateFlow<CosConfigUiState> = _ui.asStateFlow()
 
     init {
-        val saved = store.read()
-        if (saved != null) {
-            _ui.value = CosConfigUiState(
-                secretId = saved.secretId,
-                secretKey = saved.secretKey,
-                region = saved.region,
-                bucket = saved.bucket,
-                prefix = saved.prefix,
-            )
+        viewModelScope.launch {
+            val saved = store.read()
+            if (saved != null) {
+                _ui.value = CosConfigUiState(
+                    secretId = saved.secretId,
+                    secretKey = saved.secretKey,
+                    region = saved.region,
+                    bucket = saved.bucket,
+                    prefix = saved.prefix,
+                )
+            }
         }
     }
 
@@ -76,6 +77,7 @@ class CosConfigViewModel(
             _ui.value = _ui.value.copy(isBusy = true, message = null)
             try {
                 store.save(s)
+                container.cloudStorageSelectionStore.saveKind(CloudStorageKind.OBJECT_COS)
                 container.workManager.enqueueUniqueWork(
                     RefreshAndEnqueueWorker.UNIQUE_NAME,
                     ExistingWorkPolicy.REPLACE,
@@ -96,7 +98,7 @@ class CosConfigViewModel(
         viewModelScope.launch {
             _ui.value = _ui.value.copy(isBusy = true, message = null)
             try {
-                cosRepository.headBucket(s)
+                container.cosObjectStorageClient.testConnection()
                 _ui.value = _ui.value.copy(message = "测试连接成功", isBusy = false)
             } catch (t: Throwable) {
                 val msg = t.message?.trim().orEmpty()

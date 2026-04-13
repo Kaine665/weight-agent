@@ -145,15 +145,15 @@ fun RecordingListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
         viewModel.uiMessages.collect { msg ->
-            val needsCosAction = msg.startsWith("请先在")
-            if (needsCosAction) {
+            val needsConfigAction = msg.contains("配置") || msg.contains("选择云端")
+            if (needsConfigAction) {
                 val result = snackbarHostState.showSnackbar(
                     message = msg,
                     actionLabel = "去配置",
                     duration = SnackbarDuration.Long,
                 )
                 if (result == SnackbarResult.ActionPerformed) {
-                    navController.navigate(Routes.CONFIG)
+                    navController.navigate(Routes.CLOUD_HUB)
                 }
             } else {
                 snackbarHostState.showSnackbar(msg)
@@ -179,8 +179,8 @@ fun RecordingListScreen(
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = "刷新")
                     }
-                    IconButton(onClick = { navController.navigate(Routes.CONFIG) }) {
-                        Icon(Icons.Default.Settings, contentDescription = "COS 配置")
+                    IconButton(onClick = { navController.navigate(Routes.CLOUD_HUB) }) {
+                        Icon(Icons.Default.Settings, contentDescription = "云端与上传")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

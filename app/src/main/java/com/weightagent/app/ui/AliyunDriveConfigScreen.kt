@@ -33,10 +33,10 @@ import com.weightagent.app.ui.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CosConfigScreen(
+fun AliyunDriveConfigScreen(
     navController: NavController,
-    viewModel: CosConfigViewModel = viewModel(
-        factory = CosConfigViewModel.Factory(
+    viewModel: AliyunDriveConfigViewModel = viewModel(
+        factory = AliyunDriveConfigViewModel.Factory(
             (LocalContext.current.applicationContext as com.weightagent.app.WeightAgentApp).container,
         ),
     ),
@@ -55,7 +55,7 @@ fun CosConfigScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("腾讯云 COS") },
+                title = { Text("阿里云盘") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -76,58 +76,28 @@ fun CosConfigScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                "请使用 CAM 子账号密钥，并收敛到目标桶最小权限。SecretKey 仅保存在本机加密存储，不会写入日志或 Git。",
+                "使用阿里云盘开放平台 refresh_token。令牌仅保存在本机加密存储；请勿分享给他人。若官方接口变更导致失败，请反馈或改用 COS。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary,
             )
-            Text(
-                "提示：若手机丢失且未锁屏，桶凭证存在泄露风险；请自行评估。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-            )
-
             OutlinedTextField(
-                value = ui.secretId,
-                onValueChange = viewModel::updateSecretId,
-                label = { Text("SecretId") },
+                value = ui.refreshToken,
+                onValueChange = viewModel::updateRefreshToken,
+                label = { Text("refresh_token") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !ui.isBusy,
-            )
-            OutlinedTextField(
-                value = ui.secretKey,
-                onValueChange = viewModel::updateSecretKey,
-                label = { Text("SecretKey") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                singleLine = false,
+                minLines = 2,
                 visualTransformation = PasswordVisualTransformation(),
                 enabled = !ui.isBusy,
             )
             OutlinedTextField(
-                value = ui.region,
-                onValueChange = viewModel::updateRegion,
-                label = { Text("地域 region（如 ap-guangzhou）") },
+                value = ui.remoteFolder,
+                onValueChange = viewModel::updateRemoteFolder,
+                label = { Text("网盘内保存目录（根下文件夹名）") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !ui.isBusy,
             )
-            OutlinedTextField(
-                value = ui.bucket,
-                onValueChange = viewModel::updateBucket,
-                label = { Text("存储桶 bucket（含 AppId，如 mybucket-1250000000）") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !ui.isBusy,
-            )
-            OutlinedTextField(
-                value = ui.prefix,
-                onValueChange = viewModel::updatePrefix,
-                label = { Text("对象前缀 prefix") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !ui.isBusy,
-            )
-
             Button(
                 onClick = viewModel::testConnection,
                 modifier = Modifier.fillMaxWidth(),
@@ -142,7 +112,6 @@ fun CosConfigScreen(
             ) {
                 Text("保存")
             }
-
             val msg = ui.message
             if (!msg.isNullOrBlank()) {
                 Text(
