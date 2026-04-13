@@ -7,11 +7,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
+import com.weightagent.app.data.db.SyncStatus
 import com.weightagent.app.di.AppContainer
 import com.weightagent.app.work.RefreshAndEnqueueWorker
 import com.weightagent.app.work.UploadRecordingWorker
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -27,7 +30,17 @@ class RecordingListViewModel(
 
     val isRefreshing = MutableStateFlow(false)
 
-    fun refresh() {
+    private val _uiMessages = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val uiMessages = _uiMessages.asSharedFlow()
+
+    private fun postMessage(msg: String) {
+        viewModelScope.launch { _uiMessages.emit(msg) }
+    }
+
+    /**
+     * @param showUserFeedback 为 true 时在成功/失败时弹出 Snackbar（避免仅进入页面时的静默刷新打扰用户）
+     */
+    fun refresh(showUserFeedback: Boolean = false) {
         viewModelScope.launch {
             isRefreshing.value = true
             try {
@@ -38,6 +51,13 @@ class RecordingListViewModel(
                     RefreshAndEnqueueWorker.UNIQUE_NAME,
                     ExistingWorkPolicy.KEEP,
                     RefreshAndEnqueueWorker.buildRequest(),
+                )
+                if (showUserFeedback) {
+                    postMessage("列表已更新")
+                }
+            } catch (t: Throwable) {
+                postMessage(
+                    "扫描失败：${t.message?.trim().orEmpty().ifBlank { t.javaClass.simpleName }}",
                 )
             } finally {
                 isRefreshing.value = false
@@ -54,6 +74,7 @@ class RecordingListViewModel(
                 )
             }
             container.safFolderStore.add(uri.toString())
+            postMessage("已添加扫描目录")
             refresh()
         }
     }
@@ -68,17 +89,35 @@ class RecordingListViewModel(
                 )
             }
             container.safFolderStore.remove(uriString)
+            postMessage("已移除扫描目录")
             refresh()
         }
     }
 
     fun enqueueUpload(mediaStoreId: Long) {
-        val req = UploadRecordingWorker.buildRequest(mediaStoreId)
-        container.workManager.enqueueUniqueWork(
-            UploadRecordingWorker.uniqueWorkName(mediaStoreId),
-            ExistingWorkPolicy.REPLACE,
-            req,
-        )
+        viewModelScope.launch {
+            val settings = container.cosSettingsStore.read()
+            if (settings == null || !settings.isComplete()) {
+                _uiMessages.emit("请先在右上角「COS 配置」中填写并保存 SecretId、SecretKey、地域与存储桶后再上传")
+                return@launch
+            }
+            val row = container.recordingDao.getById(mediaStoreId)
+            if (row == null) {
+                _uiMessages.emit("找不到该录音条目")
+                return@launch
+            }
+            if (row.syncStatus == SyncStatus.UPLOADING) {
+                _uiMessages.emit("该文件正在上传中")
+                return@launch
+            }
+            val req = UploadRecordingWorker.buildRequest(mediaStoreId)
+            container.workManager.enqueueUniqueWork(
+                UploadRecordingWorker.uniqueWorkName(mediaStoreId),
+                ExistingWorkPolicy.REPLACE,
+                req,
+            )
+            _uiMessages.emit("已加入上传队列")
+        }
     }
 
     class Factory(
