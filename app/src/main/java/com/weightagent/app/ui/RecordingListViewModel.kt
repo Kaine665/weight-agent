@@ -96,8 +96,9 @@ class RecordingListViewModel(
 
     fun enqueueUpload(mediaStoreId: Long) {
         viewModelScope.launch {
-            if (!container.cloudUploadGateway.isReadyToUpload()) {
-                _uiMessages.emit("请先在右上角「云端与上传」中选定方式并完成配置后再上传")
+            val settings = container.cosSettingsStore.read()
+            if (settings == null || !settings.isComplete()) {
+                _uiMessages.emit("请先在右上角「COS 配置」中填写并保存 SecretId、SecretKey、地域与存储桶后再上传")
                 return@launch
             }
             val row = container.recordingDao.getById(mediaStoreId)

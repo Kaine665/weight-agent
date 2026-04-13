@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.weightagent.app.WeightAgentApp
+
 class RefreshAndEnqueueWorker(
     appContext: Context,
     params: WorkerParameters,
@@ -19,7 +20,8 @@ class RefreshAndEnqueueWorker(
         container.xiaomiPrivateRecorderScanner.scanIfApplicable()
         container.safTreeAudioScanner.scanPersistedTrees()
 
-        if (!container.cloudUploadGateway.isReadyToUpload()) {
+        val settings = container.cosSettingsStore.read()
+        if (settings == null || !settings.isComplete()) {
             return Result.success()
         }
 
