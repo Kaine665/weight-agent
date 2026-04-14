@@ -2,6 +2,8 @@
 
 与 **weight-agent Android 应用** 使用同一套桶配置：在任意支持 **MCP** 的 Host（Cursor、Claude Desktop 等）里 **只读** 列举对象、生成 **预签名下载 URL**。
 
+**给人 / 给 Agent 的完整步骤与可复制链接**：请先读仓库 **`docs/MCP_COS.md`**（README 文档索引里也有入口）。
+
 ## 安装（本机）
 
 ```bash
