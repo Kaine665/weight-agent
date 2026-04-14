@@ -2,6 +2,10 @@
 
 安卓本地录音同步至腾讯云 COS（第一期 MVP）。产品验收与边界见 **`docs/SPEC.md`**；Android 工程位于 **`app/`**。
 
+### 电脑端 Agent 读 COS（MCP）
+
+**使用说明（可复制链接发给任意 Agent）**：[**`docs/MCP_COS.md`**](docs/MCP_COS.md) · GitHub：`https://github.com/Kaine665/weight-agent/blob/main/docs/MCP_COS.md` · Raw：`https://raw.githubusercontent.com/Kaine665/weight-agent/main/docs/MCP_COS.md`。内含安装、`mcp.json`、环境变量与安全说明。实现代码在 **`mcp/cos-recordings/`**。
+
 ### 安装包在哪下（和 GitHub 主页的关系）
 
 GitHub **仓库主页**右侧（或顶部导航里的）**「Releases」**，对应的是 **[Releases 页面](https://github.com/Kaine665/weight-agent/releases)** 里的 **GitHub Release**（带版本号、可挂附件），**不是** Actions 里某次运行的 **Artifacts**。**`main`** 上每次 **Android CI** 成功后，**`.github/workflows/android-publish-latest.yml`** 会为 **`v{versionName}`**（与 `app/build.gradle.kts` 一致）**新建一条 Release**，附件 **`weight-agent-release.apk`**；**历史版本保留、不再用单条 `app-latest` 覆盖**。同一版本 CI 重跑时仅更新该条下的同名附件。若 Releases 仍为空，说明尚未有一次成功的 **`Publish main APK (per version)`** 运行。
@@ -89,6 +93,7 @@ git push origin v0.1.1
 | 路径 | 说明 |
 |------|------|
 | [docs/SPEC.md](docs/SPEC.md) | 第一期验收、页面结构、同步原则、DoD、10 条验收用例 |
+| [docs/MCP_COS.md](docs/MCP_COS.md) | **腾讯云 COS MCP 使用说明**（给 Agent / 给人；含可分享链接） |
 | [docs/PROJECT_ORIGIN.md](docs/PROJECT_ORIGIN.md) | 项目来源说明 |
 | [AGENTS.md](AGENTS.md) | 代理/云端构建说明 |
-| [mcp/cos-recordings/README.md](mcp/cos-recordings/README.md) | 腾讯云 COS MCP（Cursor 等）安装与工具说明 |
+| [mcp/cos-recordings/README.md](mcp/cos-recordings/README.md) | MCP 实现细节（与 `docs/MCP_COS.md` 互补） |
