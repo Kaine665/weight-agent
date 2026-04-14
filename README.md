@@ -72,11 +72,12 @@ git push origin v0.1.1
 ### 上传与对象键（幂等）
 
 - 每条录音在首次扫描时生成稳定 **`recording_id`（UUID）**，并写入 Room。
-- 对象键默认：`{prefix}{uuid}_{原始显示名}`（非法路径字符会替换为 `_`）；**失败重试沿用同一 `object_key`**，避免同一录音在云端产生多个无关联对象（整体重传覆盖同 key）。详见 `UploadRecordingWorker`。
+- 对象键默认：`{prefix}{与列表一致的显示名}`（非法路径字符会替换为 `_`；无扩展名时补 `.m4a`）；**失败重试沿用同一 `object_key`**。详见 `UploadRecordingWorker`。
 
 ### 已知限制（与 SPEC 非目标一致）
 
 - 仅 **腾讯云 COS**，无多云。
+- **MCP（电脑端 Agent 读桶）**：仓库内 **`mcp/cos-recordings/`** 提供通用 **stdio MCP**（列举对象、预签名下载 URL）。配置见该目录 **`README.md`** 与 **`.cursor/mcp.json.example`**；真实密钥勿提交，使用 `env` / `envFile`。
 - 以 **MediaStore 可见**音频为主（**不**按应用来源排除飞书等第三方录音）；**小米系**还会扫描公共目录 **`MIUI/sound_recorder`**、**`Recordings/SoundRecorder`** 等；在授予 **全部文件访问** 后额外扫 **`Android/data`/`Android/media` 下录音相关包**。**m4a 等格式不排除**。扫描 **Audio.Media** 与 **Files（MEDIA_TYPE_AUDIO）**；**IS_PENDING** 接受 **NULL** 与 `0`；不按 MIME 在 SQL 里限制为 `audio/*`；跳过 `video/*`。上传支持 **`content://`** 与 **`file://`**。
 - 断网、杀进程依赖 **WorkManager** 重试与用户再次打开 App 触发巡检；不承诺秒级上传。
 - 清除应用数据会丢失本地配置与队列状态；云端已存在对象**不会**自动与本地对齐（SPEC 用例 10）。
@@ -90,3 +91,4 @@ git push origin v0.1.1
 | [docs/SPEC.md](docs/SPEC.md) | 第一期验收、页面结构、同步原则、DoD、10 条验收用例 |
 | [docs/PROJECT_ORIGIN.md](docs/PROJECT_ORIGIN.md) | 项目来源说明 |
 | [AGENTS.md](AGENTS.md) | 代理/云端构建说明 |
+| [mcp/cos-recordings/README.md](mcp/cos-recordings/README.md) | 腾讯云 COS MCP（Cursor 等）安装与工具说明 |

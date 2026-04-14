@@ -71,4 +71,7 @@ interface RecordingDao {
 
     @Query("DELETE FROM recordings WHERE mediaStoreId = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("UPDATE recordings SET syncProgressPercent = :percent WHERE mediaStoreId = :id")
+    suspend fun updateSyncProgressPercent(id: Long, percent: Int)
 }

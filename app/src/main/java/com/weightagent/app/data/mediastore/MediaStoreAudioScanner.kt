@@ -172,6 +172,7 @@ class MediaStoreAudioScanner(
             lastStableSizeBytes = existing?.lastStableSizeBytes,
             lastStableCheckMs = existing?.lastStableCheckMs,
             contentSha256 = existing?.contentSha256,
+            syncProgressPercent = existing?.syncProgressPercent ?: 0,
         )
         recordingDao.upsertScanRow(entity)
     }

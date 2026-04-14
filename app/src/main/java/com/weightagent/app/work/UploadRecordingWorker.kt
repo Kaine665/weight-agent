@@ -13,7 +13,9 @@ import com.weightagent.app.data.db.RecordingEntity
 import com.weightagent.app.data.db.SyncStatus
 import com.weightagent.app.data.mediastore.MediaStoreSizeReader
 import com.weightagent.app.data.upload.UriToFile
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -53,6 +55,7 @@ class UploadRecordingWorker(
             syncStatus = SyncStatus.UPLOADING,
             sizeBytes = stable.sizeBytes,
             lastError = null,
+            syncProgressPercent = 0,
         )
         dao.update(working)
 
@@ -60,16 +63,25 @@ class UploadRecordingWorker(
             ?: buildObjectKey(settings.normalizedPrefix, entity)
 
         return try {
+            dao.updateSyncProgressPercent(mediaStoreId, 5)
             val cacheName = "upload_${entity.recordingUuid}.bin"
             val localFile: File = UriToFile.copyToCache(
                 applicationContext,
                 android.net.Uri.parse(entity.contentUri),
                 cacheName,
             )
+            dao.updateSyncProgressPercent(mediaStoreId, 10)
             val outcome = cosRepository.uploadFile(
                 settings = settings,
                 localAbsolutePath = localFile.absolutePath,
                 objectKey = objectKey,
+                onUploadProgressPercent = { pct ->
+                    // 拷贝约占 10%，上传占 10–99；同步写库避免与最终 100% 异步竞态
+                    val mapped = 10 + (pct * 89 / 99).coerceIn(0, 89)
+                    runBlocking(Dispatchers.IO) {
+                        dao.updateSyncProgressPercent(mediaStoreId, mapped)
+                    }
+                },
             )
             runCatching { localFile.delete() }
 
@@ -80,6 +92,7 @@ class UploadRecordingWorker(
                 remoteSizeBytes = stable.sizeBytes,
                 lastError = null,
                 sizeBytes = stable.sizeBytes,
+                syncProgressPercent = 100,
             )
             dao.update(done)
             Result.success()
@@ -89,6 +102,7 @@ class UploadRecordingWorker(
                 syncStatus = SyncStatus.FAILED,
                 objectKey = objectKey,
                 lastError = humanMessage(t),
+                syncProgressPercent = 0,
             )
             dao.update(failed)
             Result.retry()
@@ -102,6 +116,7 @@ class UploadRecordingWorker(
             e.copy(
                 syncStatus = SyncStatus.PAUSED,
                 lastError = "请先完成腾讯云 COS 配置并保存",
+                syncProgressPercent = 0,
             ),
         )
     }
@@ -144,12 +159,13 @@ class UploadRecordingWorker(
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
 
+        /** 远端对象名与本地 [RecordingEntity.displayName] 一致（仅替换 COS 非法字符）；无扩展名时补 `.m4a`。 */
         internal fun buildObjectKey(prefix: String, entity: RecordingEntity): String {
             val safeName = entity.displayName
                 .replace(Regex("[\\\\/:*?\"<>|]"), "_")
                 .ifBlank { "audio" }
             val ext = if ('.' in safeName) "" else ".m4a"
-            return "${prefix}${entity.recordingUuid}_$safeName$ext"
+            return "${prefix}$safeName$ext"
         }
 
         private fun humanMessage(t: Throwable): String {

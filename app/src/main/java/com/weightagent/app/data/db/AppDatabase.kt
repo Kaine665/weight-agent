@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [RecordingEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(SyncStatusConverters::class)
@@ -21,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, NAME)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .fallbackToDestructiveMigration()
                 .build()
     }

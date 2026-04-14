@@ -2,13 +2,14 @@ package com.weightagent.app.work
 
 import com.weightagent.app.data.db.RecordingEntity
 import com.weightagent.app.data.db.SyncStatus
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UploadRecordingWorkerObjectKeyTest {
 
     @Test
-    fun buildObjectKey_includesUuidAndSanitizesName() {
+    fun buildObjectKey_matchesDisplayNameAndSanitizes() {
         val entity = RecordingEntity(
             mediaStoreId = 1L,
             recordingUuid = "uuid-1",
@@ -26,7 +27,7 @@ class UploadRecordingWorkerObjectKeyTest {
             lastStableCheckMs = null,
         )
         val key = UploadRecordingWorker.buildObjectKey("pre/", entity)
-        assertTrue(key.startsWith("pre/uuid-1_"))
-        assertTrue(key.contains("bad_name_"))
+        assertEquals("pre/bad_name_.m4a", key)
+        assertTrue(!key.contains("uuid-1"))
     }
 }

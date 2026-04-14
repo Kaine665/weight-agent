@@ -21,4 +21,6 @@ data class RecordingEntity(
     val lastStableCheckMs: Long?,
     /** 预留：后续可对文件做 SHA256 校验；本期可为 null */
     val contentSha256: String? = null,
+    /** 同步进度 0–100；非上传中时可保留上次完成值或 0 */
+    val syncProgressPercent: Int = 0,
 )

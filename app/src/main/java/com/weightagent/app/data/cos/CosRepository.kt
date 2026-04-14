@@ -7,6 +7,7 @@ import com.tencent.cos.xml.listener.CosXmlResultListener
 import com.tencent.cos.xml.model.CosXmlRequest
 import com.tencent.cos.xml.model.CosXmlResult
 import com.tencent.cos.xml.model.bucket.HeadBucketRequest
+import com.tencent.cos.xml.listener.CosXmlProgressListener
 import com.tencent.cos.xml.transfer.COSXMLUploadTask
 import com.tencent.cos.xml.transfer.TransferConfig
 import com.tencent.cos.xml.transfer.TransferManager
@@ -47,6 +48,7 @@ class CosRepository(private val context: Context) {
         settings: CosSettings,
         localAbsolutePath: String,
         objectKey: String,
+        onUploadProgressPercent: ((Int) -> Unit)? = null,
     ): UploadOutcome = withContext(Dispatchers.IO) {
         val cosXmlService = CosClientFactory.createService(context, settings)
         val transferConfig = TransferConfig.Builder()
@@ -60,6 +62,17 @@ class CosRepository(private val context: Context) {
                 localAbsolutePath,
                 null,
             )
+            if (onUploadProgressPercent != null) {
+                task.setCosXmlProgressListener(
+                    CosXmlProgressListener { complete, target ->
+                        val pct = when {
+                            target <= 0L -> 0
+                            else -> ((complete * 100L) / target).toInt().coerceIn(0, 99)
+                        }
+                        onUploadProgressPercent(pct)
+                    },
+                )
+            }
             task.setCosXmlResultListener(object : CosXmlResultListener {
                 override fun onSuccess(request: CosXmlRequest, result: CosXmlResult) {
                     val uploadResult = result as? COSXMLUploadTask.COSXMLUploadTaskResult

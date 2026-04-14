@@ -26,6 +26,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -402,6 +403,33 @@ private fun RecordingRow(
             Text(
                 "同步状态：${syncStatusLabel(row.syncStatus)}",
                 style = MaterialTheme.typography.bodyMedium,
+            )
+            val progressFraction = when (row.syncStatus) {
+                SyncStatus.SYNCED -> 1f
+                SyncStatus.UPLOADING -> (row.syncProgressPercent.coerceIn(0, 100) / 100f)
+                else -> 0f
+            }
+            val progressLabel = when (row.syncStatus) {
+                SyncStatus.UPLOADING -> "上传进度 ${row.syncProgressPercent.coerceIn(0, 100)}%"
+                SyncStatus.SYNCED -> "已完成 100%"
+                SyncStatus.PENDING -> "待同步 0%"
+                SyncStatus.FAILED -> "上次失败，进度已重置"
+                SyncStatus.PAUSED -> "等待配置"
+            }
+            Text(
+                progressLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LinearProgressIndicator(
+                progress = { progressFraction },
+                modifier = Modifier.fillMaxWidth(),
+                color = when (row.syncStatus) {
+                    SyncStatus.SYNCED -> MaterialTheme.colorScheme.primary
+                    SyncStatus.UPLOADING -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                },
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
             if (!row.lastError.isNullOrBlank()) {
                 Text(

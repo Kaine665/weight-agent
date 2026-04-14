@@ -21,3 +21,8 @@ captures/
 
 # OS
 .DS_Store
+
+# MCP local venv / secrets
+mcp/cos-recordings/.venv/
+mcp/**/__pycache__/
+.cursor/mcp.json
